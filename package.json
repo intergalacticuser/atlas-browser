@@ -1,0 +1,67 @@
+{
+  "name": "atlasiant-browser",
+  "version": "0.2.2",
+  "description": "Privacy-first web browser for macOS with built-in Search Angel engine, Tor integration, tracker blocking, and Internet Map visualization",
+  "main": "dist-electron/main/index.js",
+  "bin": {
+    "atlasiant-browser": "./bin/cli.js"
+  },
+  "scripts": {
+    "dev": "electron .",
+    "build:ts": "tsc",
+    "start": "npm run build:ts && electron .",
+    "build": "npm run build:ts && electron-builder --mac",
+    "clean": "rm -rf dist dist-electron"
+  },
+  "keywords": [
+    "browser",
+    "privacy",
+    "electron",
+    "tor",
+    "search-engine",
+    "tracker-blocker",
+    "macos",
+    "open-source",
+    "duckduckgo",
+    "anonymous",
+    "secure",
+    "no-tracking"
+  ],
+  "author": "Daniel V. <intergalacticuser@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/intergalacticuser/atlasiant-browser.git"
+  },
+  "homepage": "https://github.com/intergalacticuser/atlasiant-browser",
+  "bugs": {
+    "url": "https://github.com/intergalacticuser/atlasiant-browser/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": ["darwin"],
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.atlasiant.browser",
+    "productName": "Atlasiant Browser",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/logo.png",
+      "target": ["dmg", "zip"]
+    },
+    "files": [
+      "dist-electron/**/*",
+      "src/renderer/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

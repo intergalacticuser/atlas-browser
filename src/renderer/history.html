@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>History - Atlasiant Browser</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body { padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    .subtitle { color: #8888a0; font-size: 13px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    .clear-btn { background: none; border: 1px solid #1e1e2e; color: #8888a0; padding: 5px 14px; border-radius: 8px; cursor: pointer; font-size: 11px; }
+    .clear-btn:hover { border-color: #ef4444; color: #ef4444; }
+    .search { width: 100%; padding: 10px 16px; background: #12121a; border: 1px solid #1e1e2e; border-radius: 10px; color: #e2e2e8; font-size: 14px; outline: none; margin-bottom: 16px; }
+    .search:focus { border-color: #00d4ff; }
+    .day-header { font-size: 12px; color: #00d4ff; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .history-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
+    .history-item:hover { background: #1a1a28; }
+    .h-time { font-size: 10px; color: #8888a0; font-family: 'SF Mono', monospace; min-width: 45px; }
+    .h-title { font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .h-url { font-size: 10px; color: #8888a0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'SF Mono', monospace; }
+    .h-delete { opacity: 0; background: none; border: none; color: #8888a0; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+    .history-item:hover .h-delete { opacity: 1; }
+    .h-delete:hover { color: #ef4444; }
+    .empty { text-align: center; padding: 60px; color: #8888a0; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <h1>&#x1f553; History</h1>
+  <div class="subtitle">
+    <span>Recently visited pages</span>
+    <button class="clear-btn" id="clear-btn">Clear All History</button>
+  </div>
+  <input class="search" id="search" placeholder="Search history..." autofocus>
+  <div id="history-list"></div>
+  <script>
+    const api = window.browserAPI;
+    const list = document.getElementById('history-list');
+    const search = document.getElementById('search');
+    const clearBtn = document.getElementById('clear-btn');
+    let allHistory = [];
+
+    async function load() {
+      if (!api) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">&#x1f553;</div><p>History not available</p></div>';
+        return;
+      }
+      allHistory = await api.getHistory();
+      render(allHistory);
+    }
+
+    function render(items) {
+      if (!items || items.length === 0) {
+        list.innerHTML = '<div class="empty"><div class="empty-icon">&#x1f553;</div><p>No history yet</p></div>';
+        return;
+      }
+
+      // Group by day
+      const groups = {};
+      items.forEach(item => {
+        const day = new Date(item.timestamp).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        if (!groups[day]) groups[day] = [];
+        groups[day].push(item);
+      });
+
+      let html = '';
+      for (const [day, dayItems] of Object.entries(groups)) {
+        html += '<div class="day-header">' + day + '</div>';
+        dayItems.forEach(item => {
+          const time = new Date(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          html += '<div class="history-item" data-url="' + item.url + '">' +
+            '<span class="h-time">' + time + '</span>' +
+            '<span class="h-title">' + (item.title || item.url) + '</span>' +
+            '<span class="h-url">' + item.url + '</span>' +
+            '<button class="h-delete" data-id="' + item.id + '">&times;</button>' +
+          '</div>';
+        });
+      }
+      list.innerHTML = html;
+
+      list.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (e.target.classList.contains('h-delete')) return;
+          if (api) api.navigate(el.dataset.url);
+          else window.location.href = el.dataset.url;
+        });
+      });
+
+      list.querySelectorAll('.h-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await api.deleteHistoryItem(btn.dataset.id);
+          load();
+        });
+      });
+    }
+
+    search.addEventListener('input', () => {
+      const q = search.value.toLowerCase();
+      render(allHistory.filter(i => (i.title || '').toLowerCase().includes(q) || i.url.toLowerCase().includes(q)));
+    });
+
+    clearBtn.addEventListener('click', async () => {
+      if (!api || !confirm('Clear all browsing history?')) return;
+      await api.clearHistory();
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
