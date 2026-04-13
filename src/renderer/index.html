@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Angle Browser</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Loading Progress Bar -->
+  <div id="progress-bar" class="progress-bar-container hidden">
+    <div id="progress-fill" class="progress-fill"></div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="context-menu" class="context-menu hidden">
+    <div class="ctx-item" data-action="back">&#8592; Back</div>
+    <div class="ctx-item" data-action="forward">&#8594; Forward</div>
+    <div class="ctx-item" data-action="reload">&#8635; Reload</div>
+    <div class="ctx-separator"></div>
+    <div class="ctx-item" data-action="newtab">Open in New Tab</div>
+    <div class="ctx-item" data-action="copyurl">Copy Page URL</div>
+    <div class="ctx-separator"></div>
+    <div class="ctx-item" data-action="devtools">Inspect Element</div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div id="tab-bar" class="tab-bar">
+    <div class="tab-bar-drag-region"></div>
+    <div id="tabs-container" class="tabs-container"></div>
+    <button id="new-tab-btn" class="new-tab-btn" title="New Tab (Cmd+T)">+</button>
+  </div>
+
+  <!-- Navigation Bar -->
+  <div id="nav-bar" class="nav-bar">
+    <div class="nav-controls">
+      <button id="back-btn" class="nav-btn" title="Back" disabled>&#8592;</button>
+      <button id="forward-btn" class="nav-btn" title="Forward" disabled>&#8594;</button>
+      <button id="reload-btn" class="nav-btn" title="Reload">&#8635;</button>
+      <button id="home-btn" class="nav-btn" title="Home">&#8962;</button>
+    </div>
+
+    <div class="address-bar-wrapper">
+      <span id="ssl-indicator" class="ssl-indicator ssl-secure">&#x1f512;</span>
+      <input id="address-bar" class="address-bar" type="text" placeholder="Search with Search Angel or enter URL..." spellcheck="false">
+      <button id="bookmark-star" class="bookmark-star" title="Bookmark this page (Cmd+D)">&#9734;</button>
+    </div>
+
+    <div class="toolbar-actions">
+      <!-- Zoom controls -->
+      <div class="zoom-controls">
+        <button id="zoom-out" class="zoom-btn" title="Zoom Out">-</button>
+        <span id="zoom-level" class="zoom-level">100%</span>
+        <button id="zoom-in" class="zoom-btn" title="Zoom In">+</button>
+      </div>
+
+      <div class="toolbar-separator"></div>
+
+      <!-- Shield (blocker) -->
+      <button id="shield-btn" class="toolbar-btn shield-active" title="Tracker Blocker">
+        &#x1f6e1;
+        <span id="blocked-count" class="blocked-badge">0</span>
+      </button>
+
+      <!-- Tor Toggle -->
+      <button id="tor-btn" class="toolbar-btn" title="Tor Mode">&#x1f9c5;</button>
+
+      <!-- Phantom Mode -->
+      <button id="phantom-btn" class="toolbar-btn" title="Phantom Mode - Isolated Docker Session">&#x1f47b;</button>
+
+      <!-- Downloads -->
+      <button id="downloads-btn" class="toolbar-btn" title="Downloads (Cmd+J)">&#x2b07;</button>
+
+      <!-- Internet Map -->
+      <button id="map-btn" class="toolbar-btn" title="Internet Map">&#x1f5fa;</button>
+
+      <!-- Settings -->
+      <button id="settings-btn" class="toolbar-btn" title="Settings">&#x2699;</button>
+
+      <!-- Security Panel Toggle -->
+      <button id="security-btn" class="toolbar-btn" title="Security Info">&#x1f50d;</button>
+    </div>
+  </div>
+
+  <!-- Phantom Mode Status Bar (hidden by default) -->
+  <div id="phantom-bar" class="phantom-bar hidden">
+    <span class="phantom-pulse"></span>
+    <span class="phantom-label">PHANTOM MODE</span>
+    <span class="phantom-info" id="phantom-info">Container starting...</span>
+    <span class="phantom-timer" id="phantom-timer">30:00</span>
+    <button id="phantom-destroy" class="phantom-destroy-btn">Destroy Container</button>
+  </div>
+
+  <!-- Bookmarks Bar -->
+  <div id="bookmarks-bar" class="bookmarks-bar">
+    <div id="bookmarks-container" class="bookmarks-container">
+      <span class="bookmarks-empty">Bookmark pages with &#9734; to see them here</span>
+    </div>
+    <button id="all-bookmarks-btn" class="all-bookmarks-btn" title="All Bookmarks">&#x1f4d1;</button>
+  </div>
+
+  <!-- Security Sidebar -->
+  <div id="security-sidebar" class="security-sidebar hidden">
+    <div class="sidebar-header">
+      <h3>Security &amp; Privacy</h3>
+      <button id="close-sidebar" class="close-btn">&times;</button>
+    </div>
+    <div id="security-content" class="sidebar-content">
+      <div class="security-section">
+        <div class="privacy-score-container">
+          <div id="privacy-score" class="privacy-score">100</div>
+          <div class="privacy-score-label">Privacy Score</div>
+        </div>
+      </div>
+      <div class="security-section">
+        <h4>Connection</h4>
+        <div class="info-rows">
+          <div class="info-row"><span class="label">Protocol</span><span id="proto-val" class="value">-</span></div>
+          <div class="info-row"><span class="label">Certificate</span><span id="cert-val" class="value">-</span></div>
+        </div>
+      </div>
+      <div class="security-section">
+        <h4>Trackers Blocked</h4>
+        <div class="info-rows">
+          <div class="info-row"><span class="label">This page</span><span id="trackers-page" class="value badge-green">0</span></div>
+          <div class="info-row"><span class="label">Total session</span><span id="trackers-total" class="value">0</span></div>
+        </div>
+      </div>
+      <div class="security-section">
+        <h4>Cookies</h4>
+        <div class="info-rows">
+          <div class="info-row"><span class="label">Count</span><span id="cookies-count" class="value">0</span></div>
+        </div>
+      </div>
+      <div class="security-section">
+        <h4>Tor Circuit</h4>
+        <div id="tor-circuit" class="tor-circuit">
+          <span class="tor-disabled">Tor is disabled</span>
+        </div>
+      </div>
+      <div class="security-section">
+        <h4>Network Map</h4>
+        <canvas id="network-canvas" width="280" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="browser-ui.js"></script>
+  <script src="security-panel.js"></script>
+  <script src="network-map.js"></script>
+</body>
+</html>

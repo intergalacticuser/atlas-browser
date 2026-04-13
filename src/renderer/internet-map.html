@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Internet Map - Angle Browser</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #050508; color: #e2e2e8; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; }
+    #canvas { width: 100%; height: 100%; display: block; }
+    .controls {
+      position: fixed; top: 16px; left: 16px; z-index: 10;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .controls input {
+      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e; color: #e2e2e8;
+      padding: 8px 16px; border-radius: 10px; font-size: 13px; width: 320px;
+      outline: none; font-family: 'SF Mono', monospace; backdrop-filter: blur(8px);
+    }
+    .controls input:focus { border-color: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.15); }
+    .controls button {
+      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e; color: #00d4ff;
+      padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 12px;
+      backdrop-filter: blur(8px);
+    }
+    .controls button:hover { background: rgba(0,212,255,0.1); border-color: #00d4ff; }
+    .info-panel {
+      position: fixed; bottom: 16px; right: 16px; z-index: 10;
+      background: rgba(18,18,26,0.95); border: 1px solid #1e1e2e;
+      border-radius: 12px; padding: 16px; min-width: 240px;
+      backdrop-filter: blur(8px); font-size: 12px;
+    }
+    .info-panel h3 { font-size: 13px; color: #00d4ff; margin-bottom: 8px; }
+    .info-row { display: flex; justify-content: space-between; padding: 3px 0; }
+    .info-row .lbl { color: #8888a0; }
+    .info-row .val { color: #e2e2e8; font-family: 'SF Mono', monospace; }
+    .legend {
+      position: fixed; bottom: 16px; left: 16px; z-index: 10;
+      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e;
+      border-radius: 10px; padding: 12px; font-size: 10px;
+      backdrop-filter: blur(8px);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <input id="domain-input" type="text" placeholder="Enter domain to locate (e.g. google.com)" spellcheck="false">
+    <button id="locate-btn">Locate</button>
+    <button id="reset-btn">Reset View</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="info-panel" id="info-panel">
+    <h3>&#x1f5fa; Internet Map</h3>
+    <div class="info-row"><span class="lbl">Nodes</span><span class="val" id="node-count">0</span></div>
+    <div class="info-row"><span class="lbl">Connections</span><span class="val" id="edge-count">0</span></div>
+    <div class="info-row"><span class="lbl">Selected</span><span class="val" id="selected-node">-</span></div>
+    <div class="info-row"><span class="lbl">IP</span><span class="val" id="selected-ip">-</span></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div> Backbone / ISP</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> CDN / Cloud</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> User-added domain</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> DNS Server</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Tor Node</div>
+  </div>
+
+  <script>
+    const api = window.browserAPI;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // ── Resize ──────────────────────────────────────────────
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ── Colors ──────────────────────────────────────────────
+    const C = { bg: '#050508', accent: '#00d4ff', green: '#22c55e', purple: '#a855f7', amber: '#eab308', red: '#ef4444', muted: '#8888a0', text: '#e2e2e8' };
+
+    // ── Node types ──────────────────────────────────────────
+    const BACKBONE = [
+      { id: 'ixp-ams', label: 'AMS-IX', type: 'backbone', x: 0, y: 0, r: 14 },
+      { id: 'ixp-lon', label: 'LINX London', type: 'backbone', x: 0, y: 0, r: 12 },
+      { id: 'ixp-ny', label: 'NY-IX', type: 'backbone', x: 0, y: 0, r: 14 },
+      { id: 'ixp-sf', label: 'SFO-IX', type: 'backbone', x: 0, y: 0, r: 12 },
+      { id: 'ixp-tok', label: 'JPIX Tokyo', type: 'backbone', x: 0, y: 0, r: 10 },
+      { id: 'ixp-sg', label: 'SGIX', type: 'backbone', x: 0, y: 0, r: 10 },
+      { id: 'ixp-fra', label: 'DE-CIX', type: 'backbone', x: 0, y: 0, r: 14 },
+      { id: 'cdn-cf', label: 'Cloudflare', type: 'cdn', x: 0, y: 0, r: 10 },
+      { id: 'cdn-aws', label: 'AWS', type: 'cdn', x: 0, y: 0, r: 10 },
+      { id: 'cdn-gcp', label: 'Google Cloud', type: 'cdn', x: 0, y: 0, r: 10 },
+      { id: 'cdn-azure', label: 'Azure', type: 'cdn', x: 0, y: 0, r: 8 },
+      { id: 'cdn-akamai', label: 'Akamai', type: 'cdn', x: 0, y: 0, r: 8 },
+      { id: 'dns-root', label: 'Root DNS', type: 'dns', x: 0, y: 0, r: 8 },
+      { id: 'dns-cf', label: '1.1.1.1', type: 'dns', x: 0, y: 0, r: 6 },
+      { id: 'dns-google', label: '8.8.8.8', type: 'dns', x: 0, y: 0, r: 6 },
+    ];
+
+    const BACKBONE_EDGES = [
+      ['ixp-ams', 'ixp-lon'], ['ixp-ams', 'ixp-fra'], ['ixp-lon', 'ixp-ny'],
+      ['ixp-ny', 'ixp-sf'], ['ixp-fra', 'ixp-tok'], ['ixp-tok', 'ixp-sg'],
+      ['ixp-sf', 'ixp-tok'], ['ixp-ny', 'ixp-ams'], ['ixp-lon', 'ixp-fra'],
+      ['cdn-cf', 'ixp-ams'], ['cdn-cf', 'ixp-ny'], ['cdn-cf', 'ixp-sf'],
+      ['cdn-aws', 'ixp-ny'], ['cdn-aws', 'ixp-fra'], ['cdn-aws', 'ixp-tok'],
+      ['cdn-gcp', 'ixp-sf'], ['cdn-gcp', 'ixp-tok'], ['cdn-gcp', 'ixp-ams'],
+      ['cdn-azure', 'ixp-lon'], ['cdn-azure', 'ixp-ny'],
+      ['cdn-akamai', 'ixp-ams'], ['cdn-akamai', 'ixp-sf'],
+      ['dns-root', 'ixp-ams'], ['dns-root', 'ixp-ny'],
+      ['dns-cf', 'cdn-cf'], ['dns-google', 'cdn-gcp'],
+    ];
+
+    let nodes = [...BACKBONE];
+    let edges = [...BACKBONE_EDGES];
+    let frame = 0;
+    let pan = { x: 0, y: 0 };
+    let zoom = 1;
+    let dragging = false;
+    let lastMouse = { x: 0, y: 0 };
+    let selectedNode = null;
+
+    // ── Layout nodes in circle ──────────────────────────────
+    function layout() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const r = Math.min(cx, cy) * 0.6;
+      nodes.forEach((n, i) => {
+        if (n.type === 'user') return; // User nodes positioned separately
+        const angle = (i / BACKBONE.length) * Math.PI * 2 - Math.PI / 2;
+        n.x = cx + Math.cos(angle) * r * (0.6 + Math.random() * 0.4);
+        n.y = cy + Math.sin(angle) * r * (0.6 + Math.random() * 0.4);
+      });
+    }
+    layout();
+
+    // ── Get node color ──────────────────────────────────────
+    function nodeColor(type) {
+      return { backbone: C.accent, cdn: C.green, dns: C.amber, user: C.purple, tor: C.red }[type] || C.muted;
+    }
+
+    // ── Draw ────────────────────────────────────────────────
+    function draw() {
+      ctx.fillStyle = C.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      // Edges
+      edges.forEach(([a, b]) => {
+        const na = nodes.find(n => n.id === a);
+        const nb = nodes.find(n => n.id === b);
+        if (!na || !nb) return;
+        ctx.strokeStyle = C.muted + '25';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(na.x, na.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.stroke();
+
+        // Data packet
+        const t = ((frame * 0.5 + nodes.indexOf(na) * 10) % 120) / 120;
+        const px = na.x + (nb.x - na.x) * t;
+        const py = na.y + (nb.y - na.y) * t;
+        ctx.fillStyle = nodeColor(na.type) + '60';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Nodes
+      nodes.forEach(n => {
+        const col = nodeColor(n.type);
+        // Glow
+        const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3);
+        g.addColorStop(0, col + '20');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r * 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Circle
+        ctx.fillStyle = n === selectedNode ? '#fff' : col;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ring
+        if (n === selectedNode) {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Label
+        ctx.fillStyle = C.text;
+        ctx.font = `${Math.max(8, 10 / zoom)}px -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y + n.r + 14);
+      });
+
+      ctx.restore();
+
+      // Update info
+      document.getElementById('node-count').textContent = nodes.length;
+      document.getElementById('edge-count').textContent = edges.length;
+
+      frame++;
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    // ── Mouse interaction ───────────────────────────────────
+    canvas.addEventListener('mousedown', (e) => {
+      dragging = true;
+      lastMouse = { x: e.clientX, y: e.clientY };
+
+      // Check click on node
+      const mx = (e.clientX - pan.x) / zoom;
+      const my = (e.clientY - pan.y) / zoom;
+      selectedNode = null;
+      for (const n of nodes) {
+        const dx = n.x - mx, dy = n.y - my;
+        if (dx * dx + dy * dy < (n.r + 5) * (n.r + 5)) {
+          selectedNode = n;
+          document.getElementById('selected-node').textContent = n.label;
+          document.getElementById('selected-ip').textContent = n.ip || '-';
+          break;
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      pan.x += e.clientX - lastMouse.x;
+      pan.y += e.clientY - lastMouse.y;
+      lastMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    canvas.addEventListener('mouseup', () => { dragging = false; });
+    canvas.addEventListener('wheel', (e) => {
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      zoom = Math.max(0.2, Math.min(5, zoom * factor));
+    });
+
+    // ── Locate domain ───────────────────────────────────────
+    const domainInput = document.getElementById('domain-input');
+    const locateBtn = document.getElementById('locate-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    locateBtn.addEventListener('click', () => addDomain(domainInput.value.trim()));
+    domainInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addDomain(domainInput.value.trim());
+    });
+
+    async function addDomain(domain) {
+      if (!domain) return;
+      domain = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+
+      // Check if already exists
+      if (nodes.find(n => n.id === 'user-' + domain)) {
+        selectedNode = nodes.find(n => n.id === 'user-' + domain);
+        return;
+      }
+
+      // DNS lookup
+      let ip = '-';
+      if (api) {
+        const result = await api.dnsLookup(domain);
+        if (result.addresses.length > 0) ip = result.addresses[0];
+      }
+
+      // Position near a random backbone node
+      const backbone = nodes.filter(n => n.type === 'backbone' || n.type === 'cdn');
+      const nearest = backbone[Math.floor(Math.random() * backbone.length)];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 60;
+
+      const newNode = {
+        id: 'user-' + domain,
+        label: domain,
+        type: 'user',
+        x: nearest.x + Math.cos(angle) * dist,
+        y: nearest.y + Math.sin(angle) * dist,
+        r: 8,
+        ip: ip,
+      };
+
+      nodes.push(newNode);
+      edges.push([nearest.id, newNode.id]);
+      selectedNode = newNode;
+      document.getElementById('selected-node').textContent = domain;
+      document.getElementById('selected-ip').textContent = ip;
+    }
+
+    resetBtn.addEventListener('click', () => {
+      nodes = [...BACKBONE];
+      edges = [...BACKBONE_EDGES];
+      selectedNode = null;
+      pan = { x: 0, y: 0 };
+      zoom = 1;
+      layout();
+    });
+  </script>
+</body>
+</html>

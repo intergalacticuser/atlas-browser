@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Settings - Angle Browser</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body { padding: 40px; max-width: 700px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 24px; }
+    .section { background: #12121a; border: 1px solid #1e1e2e; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .section h2 { font-size: 14px; color: #00d4ff; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e1e2e22; }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 13px; }
+    .setting-desc { font-size: 11px; color: #8888a0; margin-top: 2px; }
+    input[type="text"] { background: #0a0a0f; border: 1px solid #1e1e2e; color: #e2e2e8; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 200px; outline: none; font-family: 'SF Mono', monospace; }
+    input[type="text"]:focus { border-color: #00d4ff; }
+    .toggle { position: relative; width: 40px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #1e1e2e; border-radius: 11px; transition: 0.3s; }
+    .toggle .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #8888a0; border-radius: 50%; transition: 0.3s; }
+    .toggle input:checked + .slider { background: #00d4ff33; }
+    .toggle input:checked + .slider:before { transform: translateX(18px); background: #00d4ff; }
+    .reset-btn { background: none; border: 1px solid #ef4444; color: #ef4444; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 12px; margin-top: 12px; }
+    .reset-btn:hover { background: rgba(239,68,68,0.1); }
+    .version { text-align: center; color: #8888a033; font-size: 11px; margin-top: 24px; font-family: 'SF Mono', monospace; }
+  </style>
+</head>
+<body>
+  <h1>&#x2699; Settings</h1>
+
+  <div class="section">
+    <h2>General</h2>
+    <div class="setting-row">
+      <div><div class="setting-label">Homepage</div><div class="setting-desc">Page loaded on startup and Home button</div></div>
+      <input type="text" id="homepage" value="">
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Search Engine</div><div class="setting-desc">Used when typing in address bar</div></div>
+      <input type="text" id="searchEngine" value="Search Angel" readonly>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Privacy</h2>
+    <div class="setting-row">
+      <div><div class="setting-label">Clear data on exit</div><div class="setting-desc">Delete cookies, cache, and local storage when browser closes</div></div>
+      <label class="toggle"><input type="checkbox" id="clearDataOnExit"><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Block trackers & ads</div><div class="setting-desc">Built-in tracker and ad blocker</div></div>
+      <label class="toggle"><input type="checkbox" id="blockTrackers"><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Fingerprint protection</div><div class="setting-desc">Prevent canvas/WebGL fingerprinting</div></div>
+      <label class="toggle"><input type="checkbox" id="fingerprintProtection"><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Referrer policy</div><div class="setting-desc">What sites see when you click a link</div></div>
+      <input type="text" id="referrerPolicy" value="no-referrer">
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Appearance</h2>
+    <div class="setting-row">
+      <div><div class="setting-label">Show bookmarks bar</div><div class="setting-desc">Display bookmarks under the address bar</div></div>
+      <label class="toggle"><input type="checkbox" id="showBookmarksBar"><span class="slider"></span></label>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Default zoom</div><div class="setting-desc">Default page zoom level</div></div>
+      <input type="text" id="defaultZoom" value="100" style="width:60px; text-align:center;">
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Tor</h2>
+    <div class="setting-row">
+      <div><div class="setting-label">Tor proxy URL</div><div class="setting-desc">SOCKS5 proxy for Tor routing</div></div>
+      <input type="text" id="torProxyUrl" value="">
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Auto-connect Tor on start</div><div class="setting-desc">Enable Tor automatically when browser opens</div></div>
+      <label class="toggle"><input type="checkbox" id="autoConnectTor"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>About</h2>
+    <div class="setting-row">
+      <div><div class="setting-label">Angle Browser</div><div class="setting-desc">Version 0.2.0 by Angle</div></div>
+      <span style="color:#8888a0; font-family: 'SF Mono', monospace; font-size: 11px;">v0.2.0</span>
+    </div>
+  </div>
+
+  <button class="reset-btn" id="reset-btn">Reset All Settings</button>
+  <div class="version">Angle Browser v0.2.0 | Privacy-First | Powered by Search Angel</div>
+
+  <script>
+    const api = window.browserAPI;
+    const fields = ['homepage', 'searchEngine', 'clearDataOnExit', 'blockTrackers',
+      'fingerprintProtection', 'referrerPolicy', 'showBookmarksBar', 'defaultZoom',
+      'torProxyUrl', 'autoConnectTor'];
+
+    async function load() {
+      if (!api) return;
+      const s = await api.getSettings();
+      fields.forEach(f => {
+        const el = document.getElementById(f);
+        if (!el) return;
+        if (el.type === 'checkbox') el.checked = !!s[f];
+        else el.value = s[f] || '';
+      });
+    }
+
+    // Auto-save on change
+    fields.forEach(f => {
+      const el = document.getElementById(f);
+      if (!el || el.readOnly) return;
+      const event = el.type === 'checkbox' ? 'change' : 'blur';
+      el.addEventListener(event, () => {
+        if (!api) return;
+        const val = el.type === 'checkbox' ? el.checked :
+                    f === 'defaultZoom' ? parseInt(el.value) || 100 : el.value;
+        api.setSetting(f, val);
+      });
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', async () => {
+      if (!api || !confirm('Reset all settings to defaults?')) return;
+      await api.resetSettings();
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
