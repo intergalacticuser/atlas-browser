@@ -1,138 +1,198 @@
-// Network Map - Canvas visualization of connection path
+const networkCanvas = document.getElementById('network-canvas');
 
-const canvas = document.getElementById('network-canvas');
-if (canvas) {
-  const ctx = canvas.getContext('2d');
-  // HiDPI fix for Retina
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth || 280;
-  const cssH = canvas.clientHeight || 200;
-  canvas.width = cssW * dpr;
-  canvas.height = cssH * dpr;
-  ctx.scale(dpr, dpr);
-  const W = cssW;
-  const H = cssH;
+if (networkCanvas && window.browserAPI) {
+  const api = window.browserAPI;
+  const ctx = networkCanvas.getContext('2d');
 
-  // Colors
-  const BG = '#0a0a0f';
-  const ACCENT = '#00d4ff';
-  const PURPLE = '#a855f7';
-  const GREEN = '#22c55e';
-  const MUTED = '#8888a0';
-  const TEXT = '#e2e2e8';
+  const COLORS = {
+    bg: '#06090f',
+    text: '#eef3ff',
+    muted: '#7c88a3',
+    accent: '#70d6ff',
+    accentSoft: 'rgba(112, 214, 255, 0.35)',
+    green: '#52d39b',
+    red: '#ff6f86',
+    purple: '#af80ff',
+    amber: '#f3bc58',
+  };
 
-  let animFrame = 0;
+  let width = 280;
+  let height = 200;
+  let frame = 0;
   let torMode = false;
-  let currentDomain = 'Search Angel';
+  let trackerIntel = null;
 
-  // Node positions
-  function getNodes() {
-    if (torMode) {
-      return [
-        { x: 40, y: H / 2, label: 'You', color: GREEN, r: 12 },
-        { x: W * 0.25, y: H * 0.3, label: 'Guard', color: PURPLE, r: 8 },
-        { x: W * 0.5, y: H * 0.65, label: 'Relay', color: PURPLE, r: 8 },
-        { x: W * 0.75, y: H * 0.35, label: 'Exit', color: PURPLE, r: 8 },
-        { x: W - 40, y: H / 2, label: currentDomain, color: ACCENT, r: 12 },
-      ];
-    }
-    return [
-      { x: 40, y: H / 2, label: 'You', color: GREEN, r: 12 },
-      { x: W / 2, y: H / 2, label: 'Encrypted', color: ACCENT, r: 6 },
-      { x: W - 40, y: H / 2, label: currentDomain, color: ACCENT, r: 12 },
-    ];
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const nextWidth = networkCanvas.clientWidth || 280;
+    const nextHeight = networkCanvas.clientHeight || 200;
+    width = nextWidth;
+    height = nextHeight;
+    networkCanvas.width = nextWidth * dpr;
+    networkCanvas.height = nextHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function drawFrame() {
-    ctx.fillStyle = BG;
-    ctx.fillRect(0, 0, W, H);
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-    const nodes = getNodes();
-    animFrame++;
+  function glowCircle(x, y, radius, color) {
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.8);
+    gradient.addColorStop(0, `${color}33`);
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 2.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-    // Draw connections
-    for (let i = 0; i < nodes.length - 1; i++) {
-      const a = nodes[i];
-      const b = nodes[i + 1];
+  function buildGraph() {
+    const sourceDomain = trackerIntel?.sourceDomain || 'Search Angel';
+    const trackerDomains = (trackerIntel?.domains || []).slice(0, 4);
+    const nodes = [];
+    const edges = [];
 
-      // Animated dashed line
-      ctx.strokeStyle = torMode ? PURPLE + '60' : ACCENT + '40';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.lineDashOffset = -animFrame * 0.5;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+    const sourceNode = {
+      id: 'source',
+      label: sourceDomain,
+      subtitle: trackerIntel?.isSecure ? 'HTTPS origin' : 'Direct origin',
+      x: width - 42,
+      y: height / 2,
+      radius: 12,
+      color: COLORS.accent,
+    };
 
-      // Data packet animation
-      const progress = ((animFrame * 2 + i * 30) % 100) / 100;
-      const px = a.x + (b.x - a.x) * progress;
-      const py = a.y + (b.y - a.y) * progress;
-      ctx.fillStyle = torMode ? PURPLE : ACCENT;
-      ctx.beginPath();
-      ctx.arc(px, py, 3, 0, Math.PI * 2);
-      ctx.fill();
+    const youNode = {
+      id: 'you',
+      label: 'You',
+      subtitle: torMode ? 'via Tor' : 'browser',
+      x: 40,
+      y: height / 2,
+      radius: 12,
+      color: COLORS.green,
+    };
+
+    nodes.push(youNode);
+
+    if (torMode) {
+      const guard = { id: 'guard', label: 'Guard', subtitle: 'entry', x: width * 0.28, y: height * 0.28, radius: 7, color: COLORS.purple };
+      const relay = { id: 'relay', label: 'Relay', subtitle: 'middle hop', x: width * 0.48, y: height * 0.7, radius: 7, color: COLORS.purple };
+      const exit = { id: 'exit', label: 'Exit', subtitle: 'egress', x: width * 0.7, y: height * 0.34, radius: 7, color: COLORS.purple };
+      nodes.push(guard, relay, exit);
+      edges.push([youNode, guard], [guard, relay], [relay, exit], [exit, sourceNode]);
+    } else {
+      const shield = { id: 'shield', label: 'Shield', subtitle: `${trackerIntel?.pageBlocked || 0} blocked`, x: width * 0.33, y: height / 2, radius: 8, color: COLORS.green };
+      const dns = { id: 'dns', label: 'Resolver', subtitle: '1.1.1.1 / 8.8.8.8', x: width * 0.56, y: height * 0.22, radius: 7, color: COLORS.amber };
+      nodes.push(shield, dns);
+      edges.push([youNode, shield], [shield, sourceNode], [shield, dns], [dns, sourceNode]);
     }
 
-    // Draw nodes
-    for (const node of nodes) {
-      // Glow
-      const gradient = ctx.createRadialGradient(
-        node.x, node.y, 0,
-        node.x, node.y, node.r * 2.5
-      );
-      gradient.addColorStop(0, node.color + '30');
-      gradient.addColorStop(1, 'transparent');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.r * 2.5, 0, Math.PI * 2);
-      ctx.fill();
+    nodes.push(sourceNode);
 
-      // Node circle
+    trackerDomains.forEach((domain, index) => {
+      const angle = trackerDomains.length === 1
+        ? Math.PI / 2
+        : (Math.PI / 1.2) + (index / Math.max(1, trackerDomains.length - 1)) * (Math.PI / 1.6);
+      const trackerNode = {
+        id: `tracker-${domain.domain}`,
+        label: domain.domain.replace(/^www\./, ''),
+        subtitle: `${domain.blockedCount} blocked`,
+        x: sourceNode.x - Math.cos(angle) * 82,
+        y: sourceNode.y + Math.sin(angle) * 44,
+        radius: 7,
+        color: COLORS.red,
+      };
+      nodes.push(trackerNode);
+      edges.push([trackerNode, sourceNode]);
+    });
+
+    return { nodes, edges, sourceDomain, trackerCount: trackerDomains.length };
+  }
+
+  function drawEdge(fromNode, toNode, color, speedFactor = 1) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([6, 4]);
+    ctx.lineDashOffset = -frame * speedFactor;
+    ctx.beginPath();
+    ctx.moveTo(fromNode.x, fromNode.y);
+    ctx.lineTo(toNode.x, toNode.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const progress = ((frame * speedFactor) % 120) / 120;
+    const x = fromNode.x + (toNode.x - fromNode.x) * progress;
+    const y = fromNode.y + (toNode.y - fromNode.y) * progress;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawGraph() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, width, height);
+
+    const graph = buildGraph();
+
+    graph.edges.forEach(([fromNode, toNode]) => {
+      const edgeColor = fromNode.color === COLORS.red ? 'rgba(255, 111, 134, 0.42)' : 'rgba(112, 214, 255, 0.34)';
+      drawEdge(fromNode, toNode, edgeColor, fromNode.color === COLORS.red ? 1.6 : 1.1);
+    });
+
+    graph.nodes.forEach((node) => {
+      glowCircle(node.x, node.y, node.radius, node.color);
       ctx.fillStyle = node.color;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Label
-      ctx.fillStyle = TEXT;
-      ctx.font = '9px -apple-system, sans-serif';
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '10px "SF Pro Display", sans-serif';
       ctx.textAlign = 'center';
-      const labelY = node.y > H / 2 ? node.y - node.r - 8 : node.y + node.r + 14;
-      ctx.fillText(node.label, node.x, labelY);
-    }
+      ctx.fillText(node.label.length > 18 ? `${node.label.slice(0, 16)}…` : node.label, node.x, node.y + node.radius + 14);
+    });
 
-    // Title
-    ctx.fillStyle = MUTED;
-    ctx.font = '9px -apple-system, sans-serif';
+    ctx.fillStyle = COLORS.muted;
+    ctx.font = '10px "SF Mono", monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(torMode ? 'Tor Circuit (encrypted)' : 'Direct Connection (HTTPS)', 8, 14);
+    ctx.fillText(
+      torMode
+        ? `Tor route • ${trackerIntel?.pageBlocked || 0} requests neutralized`
+        : `Direct route • ${graph.trackerCount} tracker domains mapped`,
+      10,
+      16
+    );
 
-    requestAnimationFrame(drawFrame);
+    frame += 1;
+    requestAnimationFrame(drawGraph);
   }
 
-  drawFrame();
-
-  // Listen for Tor toggle
-  const torBtn = document.getElementById('tor-btn');
-  if (torBtn) {
-    const origClick = torBtn.onclick;
-    torBtn.addEventListener('click', () => {
-      torMode = !torMode;
-    });
+  async function refreshTrackerIntel() {
+    trackerIntel = await api.getTrackerIntel();
   }
 
-  // Update domain from URL changes
-  if (window.browserAPI) {
-    window.browserAPI.onUrlChanged((data) => {
-      try {
-        const url = new URL(data.url);
-        currentDomain = url.hostname.replace('www.', '').slice(0, 15);
-      } catch {
-        currentDomain = 'Web';
-      }
-    });
-  }
+  window.addEventListener('angle:tracker-intel', (event) => {
+    trackerIntel = event.detail;
+  });
+
+  window.addEventListener('angle:tor-status', (event) => {
+    torMode = !!event.detail;
+  });
+
+  api.onUrlChanged(() => {
+    refreshTrackerIntel();
+  });
+
+  api.onBlockedCountUpdate(() => {
+    refreshTrackerIntel();
+  });
+
+  api.getTorStatus().then((status) => {
+    torMode = !!status?.enabled;
+  });
+
+  refreshTrackerIntel();
+  drawGraph();
 }

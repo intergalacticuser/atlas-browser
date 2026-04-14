@@ -13,11 +13,16 @@ contextBridge.exposeInMainWorld('browserAPI', {
   goForward: () => ipcRenderer.send('go-forward'),
   reload: () => ipcRenderer.send('reload'),
   goHome: () => ipcRenderer.send('go-home'),
-  openPage: (page: string) => ipcRenderer.send('open-page', page),
+  openPage: (page: string, context?: { sourceTabId?: number; focus?: string; view?: string }) =>
+    ipcRenderer.send('open-page', page, context),
 
   // ── Blocker ───────────────────────────────────────────────
   toggleBlocker: () => ipcRenderer.invoke('toggle-blocker'),
   getBlockerStats: () => ipcRenderer.invoke('get-blocker-stats'),
+  getTrackerIntel: (tabId?: number) => ipcRenderer.invoke('get-tracker-intel', tabId),
+  getNetworkMapData: (tabId?: number, domain?: string) => ipcRenderer.invoke('get-network-map-data', tabId, domain),
+  getSecurityOverview: () => ipcRenderer.invoke('get-security-overview'),
+  clearSecurityOverview: () => ipcRenderer.invoke('clear-security-overview'),
 
   // ── Tor ───────────────────────────────────────────────────
   toggleTor: () => ipcRenderer.invoke('toggle-tor'),
@@ -82,4 +87,5 @@ contextBridge.exposeInMainWorld('browserAPI', {
   onDownloadStarted: (cb: Function) => ipcRenderer.on('download-started', (_e, d) => cb(d)),
   onDownloadProgress: (cb: Function) => ipcRenderer.on('download-progress', (_e, d) => cb(d)),
   onDownloadDone: (cb: Function) => ipcRenderer.on('download-done', (_e, d) => cb(d)),
+  onSettingsChanged: (cb: Function) => ipcRenderer.on('settings-changed', (_e, d) => cb(d)),
 });

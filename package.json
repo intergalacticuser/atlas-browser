@@ -1,6 +1,6 @@
 {
   "name": "angle-browser",
-  "version": "0.2.2",
+  "version": "0.3.1",
   "description": "Privacy-first web browser for macOS with built-in Search Angel engine, Tor integration, tracker blocking, and Internet Map visualization",
   "main": "dist-electron/main/index.js",
   "bin": {

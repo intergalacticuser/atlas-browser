@@ -14,7 +14,7 @@ I take security seriously - especially in a privacy-focused browser. I'll respon
 
 | Version | Supported |
 |---------|-----------|
-| 0.2.x   | Yes (current beta) |
+| 0.3.x   | Yes (current beta) |
 
 ## Security Measures
 

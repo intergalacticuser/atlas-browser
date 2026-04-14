@@ -2,312 +2,1078 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Internet Map - Angle Browser</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #050508; color: #e2e2e8; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; }
-    #canvas { width: 100%; height: 100%; display: block; }
-    .controls {
-      position: fixed; top: 16px; left: 16px; z-index: 10;
-      display: flex; gap: 8px; align-items: center;
+    :root {
+      --bg: #06070b;
+      --surface: rgba(13, 17, 26, 0.88);
+      --surface-strong: rgba(17, 22, 33, 0.96);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #eef3ff;
+      --text-soft: #cad5ec;
+      --muted: #7c88a3;
+      --accent: #70d6ff;
+      --green: #52d39b;
+      --red: #ff6f86;
+      --purple: #af80ff;
+      --amber: #f3bc58;
+      --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
+      --font-copy: "Avenir Next", "SF Pro Text", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", monospace;
     }
-    .controls input {
-      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e; color: #e2e2e8;
-      padding: 8px 16px; border-radius: 10px; font-size: 13px; width: 320px;
-      outline: none; font-family: 'SF Mono', monospace; backdrop-filter: blur(8px);
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .controls input:focus { border-color: #00d4ff; box-shadow: 0 0 10px rgba(0,212,255,0.15); }
-    .controls button {
-      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e; color: #00d4ff;
-      padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 12px;
-      backdrop-filter: blur(8px);
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
-    .controls button:hover { background: rgba(0,212,255,0.1); border-color: #00d4ff; }
-    .info-panel {
-      position: fixed; bottom: 16px; right: 16px; z-index: 10;
-      background: rgba(18,18,26,0.95); border: 1px solid #1e1e2e;
-      border-radius: 12px; padding: 16px; min-width: 240px;
-      backdrop-filter: blur(8px); font-size: 12px;
+
+    body {
+      color: var(--text);
+      font-family: var(--font-copy);
+      background:
+        radial-gradient(circle at top right, rgba(112, 214, 255, 0.09), transparent 26%),
+        radial-gradient(circle at 12% 18%, rgba(175, 128, 255, 0.12), transparent 30%),
+        linear-gradient(180deg, #0b0e15 0%, #06070b 55%, #05060a 100%);
     }
-    .info-panel h3 { font-size: 13px; color: #00d4ff; margin-bottom: 8px; }
-    .info-row { display: flex; justify-content: space-between; padding: 3px 0; }
-    .info-row .lbl { color: #8888a0; }
-    .info-row .val { color: #e2e2e8; font-family: 'SF Mono', monospace; }
-    .legend {
-      position: fixed; bottom: 16px; left: 16px; z-index: 10;
-      background: rgba(18,18,26,0.9); border: 1px solid #1e1e2e;
-      border-radius: 10px; padding: 12px; font-size: 10px;
-      backdrop-filter: blur(8px);
+
+    button,
+    input {
+      font: inherit;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    button {
+      border: none;
+      background: none;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 2px solid rgba(112, 214, 255, 0.85);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr) 330px;
+      width: 100%;
+      height: 100%;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+        rgba(8, 11, 18, 0.76);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 22px 44px rgba(0, 0, 0, 0.28);
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      overflow-y: auto;
+    }
+
+    .brand-card,
+    .control-card,
+    .stats-card,
+    .list-card,
+    .selection-card {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+        rgba(10, 13, 21, 0.86);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .brand-card h1 {
+      font-family: var(--font-ui);
+      font-size: 28px;
+      line-height: 1.05;
+      margin-bottom: 10px;
+    }
+
+    .brand-card p,
+    .help-copy,
+    .muted {
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 12px;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .domain-input {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      background: rgba(4, 6, 11, 0.76);
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+
+    .action-btn,
+    .ghost-btn {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+    }
+
+    .action-btn {
+      background: rgba(112, 214, 255, 0.12);
+      color: var(--accent);
+      border-color: rgba(112, 214, 255, 0.2);
+    }
+
+    .action-btn:hover {
+      background: rgba(112, 214, 255, 0.18);
+    }
+
+    .ghost-btn {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-soft);
+    }
+
+    .ghost-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .stat-cell {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      margin-top: 6px;
+      font-family: var(--font-ui);
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .stage {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .stage-overlay {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .stage-badge {
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(7, 10, 16, 0.74);
+      backdrop-filter: blur(16px);
+      pointer-events: auto;
+    }
+
+    .stage-badge strong {
+      display: block;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .stage-badge span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .hint-bar {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(7, 10, 16, 0.8);
+      color: var(--muted);
+      font-size: 11px;
+      backdrop-filter: blur(16px);
+      pointer-events: none;
+    }
+
+    .list-card h2,
+    .selection-card h2 {
+      font-family: var(--font-ui);
+      font-size: 17px;
+      margin-bottom: 10px;
+    }
+
+    .chip-list,
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tracker-item,
+    .summary-item,
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.03);
+      text-align: left;
+    }
+
+    .tracker-item:hover {
+      border-color: rgba(255, 111, 134, 0.18);
+      background: rgba(255, 111, 134, 0.08);
+    }
+
+    .tracker-name,
+    .detail-key {
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .tracker-meta,
+    .detail-value,
+    .summary-item span:last-child {
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-align: right;
+    }
+
+    .selection-card .detail-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .selection-empty {
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 12px;
+    }
+
+    .selection-title {
+      font-family: var(--font-ui);
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+
+    .selection-type {
+      margin-top: 4px;
+      color: var(--accent);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    @media (max-width: 1380px) {
+      .shell {
+        grid-template-columns: 290px minmax(0, 1fr) 300px;
+      }
+    }
+
+    @media (max-width: 1120px) {
+      .shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(320px, 1fr) auto;
+      }
+
+      .side-panel {
+        max-height: 32vh;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="controls">
-    <input id="domain-input" type="text" placeholder="Enter domain to locate (e.g. google.com)" spellcheck="false">
-    <button id="locate-btn">Locate</button>
-    <button id="reset-btn">Reset View</button>
-  </div>
+  <div class="shell">
+    <aside class="panel side-panel">
+      <section class="brand-card">
+        <div class="eyebrow">Angle Browser</div>
+        <h1>Internet Map</h1>
+        <p>Live topology for the current page, its observed tracker surface, and the route your browser is taking through the network.</p>
+      </section>
 
-  <canvas id="canvas"></canvas>
+      <section class="control-card">
+        <div class="eyebrow">Inspect Domain</div>
+        <input id="domain-input" class="domain-input" type="text" placeholder="Enter domain, e.g. openai.com" spellcheck="false">
+        <div class="control-row">
+          <button id="locate-btn" class="action-btn">Locate Domain</button>
+          <button id="current-btn" class="ghost-btn">Use Current Page</button>
+          <button id="refresh-btn" class="ghost-btn">Refresh</button>
+          <button id="reset-btn" class="ghost-btn">Reset View</button>
+          <button id="trackers-btn" class="ghost-btn">Trackers</button>
+          <button id="infra-btn" class="ghost-btn">Infrastructure</button>
+          <button id="session-btn" class="ghost-btn">Session Overview</button>
+        </div>
+        <p id="lookup-status" class="help-copy" style="margin-top: 10px;">Open this page from the browser toolbar to carry over the current page context automatically.</p>
 
-  <div class="info-panel" id="info-panel">
-    <h3>&#x1f5fa; Internet Map</h3>
-    <div class="info-row"><span class="lbl">Nodes</span><span class="val" id="node-count">0</span></div>
-    <div class="info-row"><span class="lbl">Connections</span><span class="val" id="edge-count">0</span></div>
-    <div class="info-row"><span class="lbl">Selected</span><span class="val" id="selected-node">-</span></div>
-    <div class="info-row"><span class="lbl">IP</span><span class="val" id="selected-ip">-</span></div>
-  </div>
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <div class="stat-label">Route</div>
+            <div id="route-mode" class="stat-value">Direct</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Privacy</div>
+            <div id="privacy-value" class="stat-value">100</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Trackers</div>
+            <div id="tracker-value" class="stat-value">0</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">IPs</div>
+            <div id="ip-value" class="stat-value">0</div>
+          </div>
+        </div>
+      </section>
 
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div> Backbone / ISP</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> CDN / Cloud</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> User-added domain</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div> DNS Server</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Tor Node</div>
+      <section class="list-card">
+        <h2>Tracker Domains</h2>
+        <div id="tracker-list" class="chip-list">
+          <div class="selection-empty">No tracker domains mapped yet.</div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="panel stage">
+      <canvas id="canvas"></canvas>
+
+      <div class="stage-overlay">
+        <div class="stage-badge">
+          <strong id="source-badge">Awaiting source context</strong>
+          <span id="source-subtitle">The graph will center on the source site once data is available.</span>
+        </div>
+        <div class="stage-badge">
+          <strong id="generated-at">Live telemetry</strong>
+          <span>Pan to move. Scroll to zoom. Click nodes for detail.</span>
+        </div>
+      </div>
+
+      <div class="hint-bar">Blue = source path, red = trackers, purple = Tor relays, amber = DNS and IP infrastructure</div>
+    </main>
+
+    <aside class="panel side-panel">
+      <section class="selection-card">
+        <h2>Selected Node</h2>
+        <div id="selection-empty" class="selection-empty">Click any node in the map to inspect its role, addresses, and relationship to the current browsing context.</div>
+        <div id="selection-content" style="display:none;">
+          <div id="selection-title" class="selection-title">-</div>
+          <div id="selection-type" class="selection-type">-</div>
+          <div id="selection-details" class="detail-stack"></div>
+        </div>
+      </section>
+
+      <section class="list-card">
+        <h2>Route Summary</h2>
+        <div id="route-summary" class="summary-list">
+          <div class="summary-item"><span>Waiting for route data</span><span>-</span></div>
+        </div>
+      </section>
+
+      <section class="list-card">
+        <h2>Source Intel</h2>
+        <div id="source-summary" class="summary-list">
+          <div class="summary-item"><span>Source</span><span>-</span></div>
+        </div>
+      </section>
+    </aside>
   </div>
 
   <script>
     const api = window.browserAPI;
+    const params = new URLSearchParams(window.location.search);
+    const sourceTabId = params.get('sourceTabId') ? Number(params.get('sourceTabId')) : undefined;
+    const focusDomain = params.get('focus') || '';
+    const initialViewMode = params.get('view') || 'overview';
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-
-    // ── Resize ──────────────────────────────────────────────
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    resize();
-    window.addEventListener('resize', resize);
-
-    // ── Colors ──────────────────────────────────────────────
-    const C = { bg: '#050508', accent: '#00d4ff', green: '#22c55e', purple: '#a855f7', amber: '#eab308', red: '#ef4444', muted: '#8888a0', text: '#e2e2e8' };
-
-    // ── Node types ──────────────────────────────────────────
-    const BACKBONE = [
-      { id: 'ixp-ams', label: 'AMS-IX', type: 'backbone', x: 0, y: 0, r: 14 },
-      { id: 'ixp-lon', label: 'LINX London', type: 'backbone', x: 0, y: 0, r: 12 },
-      { id: 'ixp-ny', label: 'NY-IX', type: 'backbone', x: 0, y: 0, r: 14 },
-      { id: 'ixp-sf', label: 'SFO-IX', type: 'backbone', x: 0, y: 0, r: 12 },
-      { id: 'ixp-tok', label: 'JPIX Tokyo', type: 'backbone', x: 0, y: 0, r: 10 },
-      { id: 'ixp-sg', label: 'SGIX', type: 'backbone', x: 0, y: 0, r: 10 },
-      { id: 'ixp-fra', label: 'DE-CIX', type: 'backbone', x: 0, y: 0, r: 14 },
-      { id: 'cdn-cf', label: 'Cloudflare', type: 'cdn', x: 0, y: 0, r: 10 },
-      { id: 'cdn-aws', label: 'AWS', type: 'cdn', x: 0, y: 0, r: 10 },
-      { id: 'cdn-gcp', label: 'Google Cloud', type: 'cdn', x: 0, y: 0, r: 10 },
-      { id: 'cdn-azure', label: 'Azure', type: 'cdn', x: 0, y: 0, r: 8 },
-      { id: 'cdn-akamai', label: 'Akamai', type: 'cdn', x: 0, y: 0, r: 8 },
-      { id: 'dns-root', label: 'Root DNS', type: 'dns', x: 0, y: 0, r: 8 },
-      { id: 'dns-cf', label: '1.1.1.1', type: 'dns', x: 0, y: 0, r: 6 },
-      { id: 'dns-google', label: '8.8.8.8', type: 'dns', x: 0, y: 0, r: 6 },
-    ];
-
-    const BACKBONE_EDGES = [
-      ['ixp-ams', 'ixp-lon'], ['ixp-ams', 'ixp-fra'], ['ixp-lon', 'ixp-ny'],
-      ['ixp-ny', 'ixp-sf'], ['ixp-fra', 'ixp-tok'], ['ixp-tok', 'ixp-sg'],
-      ['ixp-sf', 'ixp-tok'], ['ixp-ny', 'ixp-ams'], ['ixp-lon', 'ixp-fra'],
-      ['cdn-cf', 'ixp-ams'], ['cdn-cf', 'ixp-ny'], ['cdn-cf', 'ixp-sf'],
-      ['cdn-aws', 'ixp-ny'], ['cdn-aws', 'ixp-fra'], ['cdn-aws', 'ixp-tok'],
-      ['cdn-gcp', 'ixp-sf'], ['cdn-gcp', 'ixp-tok'], ['cdn-gcp', 'ixp-ams'],
-      ['cdn-azure', 'ixp-lon'], ['cdn-azure', 'ixp-ny'],
-      ['cdn-akamai', 'ixp-ams'], ['cdn-akamai', 'ixp-sf'],
-      ['dns-root', 'ixp-ams'], ['dns-root', 'ixp-ny'],
-      ['dns-cf', 'cdn-cf'], ['dns-google', 'cdn-gcp'],
-    ];
-
-    let nodes = [...BACKBONE];
-    let edges = [...BACKBONE_EDGES];
-    let frame = 0;
-    let pan = { x: 0, y: 0 };
-    let zoom = 1;
-    let dragging = false;
-    let lastMouse = { x: 0, y: 0 };
-    let selectedNode = null;
-
-    // ── Layout nodes in circle ──────────────────────────────
-    function layout() {
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const r = Math.min(cx, cy) * 0.6;
-      nodes.forEach((n, i) => {
-        if (n.type === 'user') return; // User nodes positioned separately
-        const angle = (i / BACKBONE.length) * Math.PI * 2 - Math.PI / 2;
-        n.x = cx + Math.cos(angle) * r * (0.6 + Math.random() * 0.4);
-        n.y = cy + Math.sin(angle) * r * (0.6 + Math.random() * 0.4);
-      });
-    }
-    layout();
-
-    // ── Get node color ──────────────────────────────────────
-    function nodeColor(type) {
-      return { backbone: C.accent, cdn: C.green, dns: C.amber, user: C.purple, tor: C.red }[type] || C.muted;
-    }
-
-    // ── Draw ────────────────────────────────────────────────
-    function draw() {
-      ctx.fillStyle = C.bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.save();
-      ctx.translate(pan.x, pan.y);
-      ctx.scale(zoom, zoom);
-
-      // Edges
-      edges.forEach(([a, b]) => {
-        const na = nodes.find(n => n.id === a);
-        const nb = nodes.find(n => n.id === b);
-        if (!na || !nb) return;
-        ctx.strokeStyle = C.muted + '25';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(na.x, na.y);
-        ctx.lineTo(nb.x, nb.y);
-        ctx.stroke();
-
-        // Data packet
-        const t = ((frame * 0.5 + nodes.indexOf(na) * 10) % 120) / 120;
-        const px = na.x + (nb.x - na.x) * t;
-        const py = na.y + (nb.y - na.y) * t;
-        ctx.fillStyle = nodeColor(na.type) + '60';
-        ctx.beginPath();
-        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Nodes
-      nodes.forEach(n => {
-        const col = nodeColor(n.type);
-        // Glow
-        const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3);
-        g.addColorStop(0, col + '20');
-        g.addColorStop(1, 'transparent');
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r * 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Circle
-        ctx.fillStyle = n === selectedNode ? '#fff' : col;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Ring
-        if (n === selectedNode) {
-          ctx.strokeStyle = col;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-
-        // Label
-        ctx.fillStyle = C.text;
-        ctx.font = `${Math.max(8, 10 / zoom)}px -apple-system, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(n.label, n.x, n.y + n.r + 14);
-      });
-
-      ctx.restore();
-
-      // Update info
-      document.getElementById('node-count').textContent = nodes.length;
-      document.getElementById('edge-count').textContent = edges.length;
-
-      frame++;
-      requestAnimationFrame(draw);
-    }
-    draw();
-
-    // ── Mouse interaction ───────────────────────────────────
-    canvas.addEventListener('mousedown', (e) => {
-      dragging = true;
-      lastMouse = { x: e.clientX, y: e.clientY };
-
-      // Check click on node
-      const mx = (e.clientX - pan.x) / zoom;
-      const my = (e.clientY - pan.y) / zoom;
-      selectedNode = null;
-      for (const n of nodes) {
-        const dx = n.x - mx, dy = n.y - my;
-        if (dx * dx + dy * dy < (n.r + 5) * (n.r + 5)) {
-          selectedNode = n;
-          document.getElementById('selected-node').textContent = n.label;
-          document.getElementById('selected-ip').textContent = n.ip || '-';
-          break;
-        }
-      }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      pan.x += e.clientX - lastMouse.x;
-      pan.y += e.clientY - lastMouse.y;
-      lastMouse = { x: e.clientX, y: e.clientY };
-    });
-
-    canvas.addEventListener('mouseup', () => { dragging = false; });
-    canvas.addEventListener('wheel', (e) => {
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      zoom = Math.max(0.2, Math.min(5, zoom * factor));
-    });
-
-    // ── Locate domain ───────────────────────────────────────
     const domainInput = document.getElementById('domain-input');
     const locateBtn = document.getElementById('locate-btn');
+    const currentBtn = document.getElementById('current-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const trackersBtn = document.getElementById('trackers-btn');
+    const infraBtn = document.getElementById('infra-btn');
+    const sessionBtn = document.getElementById('session-btn');
+    const trackerList = document.getElementById('tracker-list');
+    const routeSummary = document.getElementById('route-summary');
+    const sourceSummary = document.getElementById('source-summary');
+    const lookupStatus = document.getElementById('lookup-status');
+    const selectionEmpty = document.getElementById('selection-empty');
+    const selectionContent = document.getElementById('selection-content');
+    const selectionTitle = document.getElementById('selection-title');
+    const selectionType = document.getElementById('selection-type');
+    const selectionDetails = document.getElementById('selection-details');
+    const routeModeValue = document.getElementById('route-mode');
+    const privacyValue = document.getElementById('privacy-value');
+    const trackerValue = document.getElementById('tracker-value');
+    const ipValue = document.getElementById('ip-value');
+    const sourceBadge = document.getElementById('source-badge');
+    const sourceSubtitle = document.getElementById('source-subtitle');
+    const generatedAt = document.getElementById('generated-at');
 
-    locateBtn.addEventListener('click', () => addDomain(domainInput.value.trim()));
-    domainInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addDomain(domainInput.value.trim());
-    });
+    const COLORS = {
+      bg: '#06070b',
+      text: '#eef3ff',
+      muted: '#7c88a3',
+      accent: '#70d6ff',
+      accentSoft: 'rgba(112, 214, 255, 0.4)',
+      green: '#52d39b',
+      red: '#ff6f86',
+      redSoft: 'rgba(255, 111, 134, 0.38)',
+      purple: '#af80ff',
+      amber: '#f3bc58',
+      amberSoft: 'rgba(243, 188, 88, 0.36)',
+    };
 
-    async function addDomain(domain) {
-      if (!domain) return;
-      domain = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+    const state = {
+      width: 0,
+      height: 0,
+      pan: { x: 0, y: 0 },
+      zoom: 1,
+      dragging: false,
+      lastPointer: { x: 0, y: 0 },
+      frame: 0,
+      data: null,
+      graph: { nodes: [], edges: [] },
+      selectedNode: null,
+      lookupDomain: '',
+      viewMode: initialViewMode,
+      currentSourceTabId: sourceTabId,
+    };
 
-      // Check if already exists
-      if (nodes.find(n => n.id === 'user-' + domain)) {
-        selectedNode = nodes.find(n => n.id === 'user-' + domain);
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      state.width = canvas.clientWidth;
+      state.height = canvas.clientHeight;
+      canvas.width = state.width * dpr;
+      canvas.height = state.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      rebuildGraph();
+    }
+
+    function nodeColor(type) {
+      return {
+        user: COLORS.green,
+        tor: COLORS.purple,
+        source: COLORS.accent,
+        tracker: COLORS.red,
+        dns: COLORS.amber,
+        ip: COLORS.amber,
+        shield: COLORS.green,
+      }[type] || COLORS.text;
+    }
+
+    function glowCircle(x, y, radius, color) {
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
+      gradient.addColorStop(0, `${color}2f`);
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function addNode(nodes, node) {
+      nodes.push(node);
+      return node;
+    }
+
+    function addEdge(edges, from, to, kind = 'route') {
+      edges.push({ from, to, kind });
+    }
+
+    function buildGraph(data) {
+      const nodes = [];
+      const edges = [];
+      const previousSelectedId = state.selectedNode?.id;
+      const centerX = state.width * 0.56;
+      const centerY = state.height * 0.48;
+      const sourceDomain = data.sourceDomain || state.lookupDomain || 'Search Angel Network';
+      const sourceAddresses = data.sourceAddresses || [];
+      const trackers = data.trackers || [];
+
+      const source = addNode(nodes, {
+        id: 'source',
+        label: sourceDomain,
+        type: 'source',
+        x: centerX,
+        y: centerY,
+        radius: 18,
+        meta: {
+          title: sourceDomain,
+          type: 'Source site',
+          'Source IPs': sourceAddresses.join(', ') || 'Not resolved',
+          'Privacy score': String(data.privacyScore ?? 100),
+          'Route mode': data.routeMode || 'direct',
+        },
+      });
+
+      const user = addNode(nodes, {
+        id: 'user',
+        label: 'You',
+        type: 'user',
+        x: state.width * 0.16,
+        y: centerY,
+        radius: 14,
+        meta: {
+          title: 'You',
+          type: 'User',
+          'Browser path': data.routeMode === 'tor' ? 'Tor circuit' : 'Direct path',
+        },
+      });
+
+      const atlasEdge = addNode(nodes, {
+        id: 'atlas-edge',
+        label: 'Atlasiant Edge',
+        type: 'source',
+        x: centerX - 120,
+        y: centerY - 180,
+        radius: 9,
+        meta: {
+          title: 'Atlasiant Edge',
+          type: 'Core network edge',
+          Role: 'Known Angle Browser / Search Angel infrastructure',
+        },
+      });
+
+      const searchCore = addNode(nodes, {
+        id: 'search-core',
+        label: 'Search Angel',
+        type: 'source',
+        x: centerX + 90,
+        y: centerY - 200,
+        radius: 9,
+        meta: {
+          title: 'Search Angel core',
+          type: 'Search infrastructure',
+          Role: 'Primary discovery engine backbone',
+        },
+      });
+
+      const globalMesh = addNode(nodes, {
+        id: 'global-mesh',
+        label: 'Global Mesh',
+        type: 'dns',
+        x: centerX + 210,
+        y: centerY - 120,
+        radius: 8,
+        meta: {
+          title: 'Global mesh',
+          type: 'Backbone infrastructure',
+          Role: 'Baseline internet structure known to the browser',
+        },
+      });
+
+      addEdge(edges, atlasEdge, searchCore, 'infra');
+      addEdge(edges, searchCore, globalMesh, 'infra');
+      addEdge(edges, globalMesh, source, 'infra');
+
+      if (data.routeMode === 'tor') {
+        const guard = addNode(nodes, {
+          id: 'tor-guard',
+          label: 'Guard',
+          type: 'tor',
+          x: state.width * 0.28,
+          y: centerY - 110,
+          radius: 8,
+          meta: { title: 'Guard relay', type: 'Tor relay', Role: 'Entry node' },
+        });
+        const relay = addNode(nodes, {
+          id: 'tor-relay',
+          label: 'Relay',
+          type: 'tor',
+          x: state.width * 0.42,
+          y: centerY + 110,
+          radius: 8,
+          meta: { title: 'Middle relay', type: 'Tor relay', Role: 'Middle hop' },
+        });
+        const exit = addNode(nodes, {
+          id: 'tor-exit',
+          label: 'Exit',
+          type: 'tor',
+          x: state.width * 0.66,
+          y: centerY - 90,
+          radius: 8,
+          meta: { title: 'Exit relay', type: 'Tor relay', Role: 'Exit node' },
+        });
+        addEdge(edges, user, guard, 'route');
+        addEdge(edges, guard, relay, 'route');
+        addEdge(edges, relay, exit, 'route');
+        addEdge(edges, exit, source, 'route');
+      } else {
+        const shield = addNode(nodes, {
+          id: 'shield',
+          label: 'Shield',
+          type: 'shield',
+          x: state.width * 0.34,
+          y: centerY,
+          radius: 9,
+          meta: {
+            title: 'Tracker blocker',
+            type: 'Protection layer',
+            'Blocked requests': String(data.pageBlocked || 0),
+            'Session total': String(data.totalBlocked || 0),
+          },
+        });
+        const resolverA = addNode(nodes, {
+          id: 'resolver-1',
+          label: data.dnsResolvers?.[0] || 'Resolver',
+          type: 'dns',
+          x: state.width * 0.44,
+          y: centerY - 120,
+          radius: 8,
+          meta: {
+            title: data.dnsResolvers?.[0] || 'Resolver',
+            type: 'DNS resolver',
+            'Role': 'Name resolution',
+          },
+        });
+        const resolverB = addNode(nodes, {
+          id: 'resolver-2',
+          label: data.dnsResolvers?.[1] || 'Resolver',
+          type: 'dns',
+          x: state.width * 0.58,
+          y: centerY - 126,
+          radius: 7,
+          meta: {
+            title: data.dnsResolvers?.[1] || 'Resolver',
+            type: 'DNS resolver',
+            'Role': 'Name resolution',
+          },
+        });
+        addEdge(edges, user, shield, 'route');
+        addEdge(edges, shield, source, 'route');
+        addEdge(edges, shield, resolverA, 'infra');
+        addEdge(edges, resolverA, resolverB, 'infra');
+        addEdge(edges, resolverB, source, 'infra');
+      }
+
+      sourceAddresses.forEach((address, index) => {
+        const ipNode = addNode(nodes, {
+          id: `source-ip-${address}`,
+          label: address,
+          type: 'ip',
+          x: centerX - 70 + (index * 70),
+          y: centerY - 150,
+          radius: 6,
+          meta: {
+            title: address,
+            type: 'Source IP',
+            'Belongs to': sourceDomain,
+          },
+        });
+        addEdge(edges, ipNode, source, 'infra');
+      });
+
+      trackers.slice(0, 6).forEach((tracker, index) => {
+        const angle = trackers.length === 1
+          ? Math.PI / 2
+          : (Math.PI * 0.72) + (index / Math.max(1, trackers.length - 1)) * (Math.PI * 0.64);
+        const trackerNode = addNode(nodes, {
+          id: `tracker-${tracker.domain}`,
+          label: tracker.domain,
+          type: 'tracker',
+          x: centerX + Math.cos(angle) * 170,
+          y: centerY + Math.sin(angle) * 118,
+          radius: 8,
+          meta: {
+            title: tracker.domain,
+            type: 'Blocked tracker',
+            'Blocked requests': String(tracker.blockedCount),
+            'Resource types': tracker.resourceTypes.join(', ') || 'Unknown',
+            'Addresses': tracker.addresses.join(', ') || 'Not resolved',
+          },
+        });
+        addEdge(edges, trackerNode, source, 'tracker');
+
+        tracker.addresses.slice(0, 2).forEach((address, ipIndex) => {
+          const addressNode = addNode(nodes, {
+            id: `tracker-ip-${tracker.domain}-${address}`,
+            label: address,
+            type: 'ip',
+            x: trackerNode.x + (ipIndex === 0 ? -38 : 38),
+            y: trackerNode.y + 54,
+            radius: 5,
+            meta: {
+              title: address,
+              type: 'Tracker IP',
+              'Belongs to': tracker.domain,
+            },
+          });
+          addEdge(edges, addressNode, trackerNode, 'infra');
+        });
+      });
+
+      state.graph = { nodes, edges };
+      state.selectedNode = nodes.find((node) => node.id === previousSelectedId)
+        || (focusDomain ? nodes.find((node) => node.label === focusDomain || node.meta?.title === focusDomain) : null)
+        || source;
+    }
+
+    function applyViewPreset() {
+      const sourceNode = state.graph.nodes.find((node) => node.id === 'source');
+      const firstTracker = state.graph.nodes.find((node) => node.type === 'tracker');
+      const infraNode = state.graph.nodes.find((node) => node.id === 'resolver-1')
+        || state.graph.nodes.find((node) => node.id === 'global-mesh')
+        || state.graph.nodes.find((node) => node.id === 'atlas-edge');
+
+      if (state.viewMode === 'trackers' && firstTracker) {
+        state.selectedNode = firstTracker;
+        state.zoom = Math.max(state.zoom, 1.08);
+      } else if (state.viewMode === 'infrastructure' && infraNode) {
+        state.selectedNode = infraNode;
+        state.zoom = Math.max(state.zoom, 1.04);
+      } else if (sourceNode) {
+        state.selectedNode = sourceNode;
+      }
+      renderSelection();
+    }
+
+    function formatGeneratedAt(timestamp) {
+      if (!timestamp) return 'Live telemetry';
+      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function updatePanels(data) {
+      routeModeValue.textContent = data.routeMode === 'tor' ? 'Tor' : 'Direct';
+      routeModeValue.style.color = data.routeMode === 'tor' ? 'var(--purple)' : 'var(--accent)';
+      privacyValue.textContent = String(data.privacyScore ?? 100);
+      privacyValue.style.color = (data.privacyScore ?? 100) >= 80 ? 'var(--green)' : (data.privacyScore ?? 100) >= 55 ? 'var(--amber)' : 'var(--red)';
+      trackerValue.textContent = String(data.trackerCount ?? 0);
+      trackerValue.style.color = (data.trackerCount ?? 0) > 0 ? 'var(--red)' : 'var(--green)';
+      ipValue.textContent = String((data.sourceAddresses?.length || 0) + (data.trackers || []).reduce((sum, item) => sum + (item.addresses?.length || 0), 0));
+      ipValue.style.color = 'var(--amber)';
+
+      sourceBadge.textContent = data.sourceDomain || 'Lookup-only map';
+      sourceSubtitle.textContent = data.routeMode === 'tor'
+        ? 'Current browsing route is protected by a Tor circuit.'
+        : 'Current browsing route is direct and protected by the local tracker shield.';
+      generatedAt.textContent = formatGeneratedAt(data.generatedAt);
+
+      routeSummary.innerHTML = '';
+      [
+        ['Route mode', data.routeMode === 'tor' ? 'Tor circuit' : 'Direct + shield'],
+        ['Blocked on page', String(data.pageBlocked || 0)],
+        ['Session total', String(data.totalBlocked || 0)],
+        ['Third-party domains', String(data.thirdPartyDomains?.length || 0)],
+        ['View mode', state.viewMode],
+      ].forEach(([label, value]) => {
+        const row = document.createElement('div');
+        row.className = 'summary-item';
+        row.innerHTML = `<span>${label}</span><span>${value}</span>`;
+        routeSummary.appendChild(row);
+      });
+
+      sourceSummary.innerHTML = '';
+      [
+        ['Source', data.sourceDomain || state.lookupDomain || 'N/A'],
+        ['Source IPs', data.sourceAddresses?.join(', ') || 'Not resolved'],
+        ['Cookies', String(data.cookieCount || 0)],
+        ['Focus', focusDomain || state.viewMode || 'source domain'],
+      ].forEach(([label, value]) => {
+        const row = document.createElement('div');
+        row.className = 'summary-item';
+        row.innerHTML = `<span>${label}</span><span>${value}</span>`;
+        sourceSummary.appendChild(row);
+      });
+
+      if (!data.trackers || data.trackers.length === 0) {
+        trackerList.innerHTML = '<div class="selection-empty">No blocked tracker domains mapped for this context.</div>';
+      } else {
+        trackerList.innerHTML = '';
+        data.trackers.forEach((tracker) => {
+          const button = document.createElement('button');
+          button.className = 'tracker-item';
+          button.innerHTML = `
+            <div>
+              <div class="tracker-name">${tracker.domain}</div>
+              <div class="tracker-meta">${tracker.resourceTypes.join(' • ') || 'request'}</div>
+            </div>
+            <div class="tracker-meta">${tracker.blockedCount} blocked</div>
+          `;
+          button.addEventListener('click', () => {
+            state.selectedNode = state.graph.nodes.find((node) => node.id === `tracker-${tracker.domain}`) || null;
+            renderSelection();
+          });
+          trackerList.appendChild(button);
+        });
+      }
+    }
+
+    function renderSelection() {
+      if (!state.selectedNode) {
+        selectionEmpty.style.display = 'block';
+        selectionContent.style.display = 'none';
         return;
       }
 
-      // DNS lookup
-      let ip = '-';
-      if (api) {
-        const result = await api.dnsLookup(domain);
-        if (result.addresses.length > 0) ip = result.addresses[0];
-      }
+      selectionEmpty.style.display = 'none';
+      selectionContent.style.display = 'block';
+      selectionTitle.textContent = state.selectedNode.meta?.title || state.selectedNode.label;
+      selectionType.textContent = state.selectedNode.meta?.type || state.selectedNode.type;
+      selectionDetails.innerHTML = '';
 
-      // Position near a random backbone node
-      const backbone = nodes.filter(n => n.type === 'backbone' || n.type === 'cdn');
-      const nearest = backbone[Math.floor(Math.random() * backbone.length)];
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 80 + Math.random() * 60;
-
-      const newNode = {
-        id: 'user-' + domain,
-        label: domain,
-        type: 'user',
-        x: nearest.x + Math.cos(angle) * dist,
-        y: nearest.y + Math.sin(angle) * dist,
-        r: 8,
-        ip: ip,
-      };
-
-      nodes.push(newNode);
-      edges.push([nearest.id, newNode.id]);
-      selectedNode = newNode;
-      document.getElementById('selected-node').textContent = domain;
-      document.getElementById('selected-ip').textContent = ip;
+      Object.entries(state.selectedNode.meta || {}).forEach(([key, value]) => {
+        if (key === 'title' || key === 'type' || value == null || value === '') return;
+        const row = document.createElement('div');
+        row.className = 'detail-row';
+        row.innerHTML = `<span class="detail-key">${key}</span><span class="detail-value">${value}</span>`;
+        selectionDetails.appendChild(row);
+      });
     }
 
-    resetBtn.addEventListener('click', () => {
-      nodes = [...BACKBONE];
-      edges = [...BACKBONE_EDGES];
-      selectedNode = null;
-      pan = { x: 0, y: 0 };
-      zoom = 1;
-      layout();
+    function screenToGraph(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - state.pan.x) / state.zoom,
+        y: (clientY - rect.top - state.pan.y) / state.zoom,
+      };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, state.width, state.height);
+      ctx.fillStyle = COLORS.bg;
+      ctx.fillRect(0, 0, state.width, state.height);
+
+      ctx.save();
+      ctx.translate(state.pan.x, state.pan.y);
+      ctx.scale(state.zoom, state.zoom);
+
+      state.graph.edges.forEach((edge, edgeIndex) => {
+        const from = edge.from;
+        const to = edge.to;
+        const stroke = edge.kind === 'tracker' ? COLORS.redSoft : edge.kind === 'infra' ? COLORS.amberSoft : COLORS.accentSoft;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = edge.kind === 'route' ? 1.7 : 1.2;
+        ctx.setLineDash(edge.kind === 'tracker' ? [5, 4] : [8, 5]);
+        ctx.lineDashOffset = -state.frame * (edge.kind === 'tracker' ? 1.6 : 1);
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const progress = ((state.frame * 0.9 + edgeIndex * 24) % 140) / 140;
+        const x = from.x + (to.x - from.x) * progress;
+        const y = from.y + (to.y - from.y) * progress;
+        ctx.fillStyle = edge.kind === 'tracker' ? COLORS.red : edge.kind === 'infra' ? COLORS.amber : COLORS.accent;
+        ctx.beginPath();
+        ctx.arc(x, y, edge.kind === 'tracker' ? 2.2 : 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      state.graph.nodes.forEach((node) => {
+        const color = nodeColor(node.type);
+        glowCircle(node.x, node.y, node.radius, color);
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (state.selectedNode && state.selectedNode.id === node.id) {
+          ctx.strokeStyle = COLORS.text;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, node.radius + 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = COLORS.text;
+        ctx.font = '12px "SF Pro Display", sans-serif';
+        ctx.textAlign = 'center';
+        const label = node.label.length > 19 ? `${node.label.slice(0, 17)}…` : node.label;
+        ctx.fillText(label, node.x, node.y + node.radius + 18);
+      });
+
+      ctx.restore();
+      state.frame += 1;
+      requestAnimationFrame(draw);
+    }
+
+    function rebuildGraph() {
+      if (!state.data) return;
+      buildGraph(state.data);
+      applyViewPreset();
+    }
+
+    async function loadMap({ tabId = sourceTabId, domain = '' } = {}) {
+      if (!api) return;
+      state.lookupDomain = domain || '';
+      const data = await api.getNetworkMapData(tabId, domain || undefined);
+      state.data = data;
+      state.currentSourceTabId = data.sourceTabId || tabId;
+      lookupStatus.textContent = domain
+        ? `Lookup mode for ${domain}. Route intelligence is centered on the resolved domain.`
+        : data.sourceDomain
+          ? `Live map loaded from ${data.sourceDomain}. Use Current Page will keep following the most recent browsing context.`
+          : `Live base map loaded. Use Current Page will attach this view to the most recent real web page.`;
+      updatePanels(data);
+      rebuildGraph();
+      if (focusDomain) {
+        state.selectedNode = state.graph.nodes.find((node) => node.label === focusDomain || node.meta?.title === focusDomain) || state.selectedNode;
+        renderSelection();
+      }
+    }
+
+    canvas.addEventListener('mousedown', (event) => {
+      const point = screenToGraph(event.clientX, event.clientY);
+      state.dragging = false;
+      state.lastPointer = { x: event.clientX, y: event.clientY };
+
+      for (const node of state.graph.nodes) {
+        const dx = node.x - point.x;
+        const dy = node.y - point.y;
+        if ((dx * dx) + (dy * dy) <= (node.radius + 6) * (node.radius + 6)) {
+          state.selectedNode = node;
+          renderSelection();
+          return;
+        }
+      }
+
+      state.dragging = true;
     });
+
+    canvas.addEventListener('mousemove', (event) => {
+      if (!state.dragging) return;
+      state.pan.x += event.clientX - state.lastPointer.x;
+      state.pan.y += event.clientY - state.lastPointer.y;
+      state.lastPointer = { x: event.clientX, y: event.clientY };
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      state.dragging = false;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      state.dragging = false;
+    });
+
+    canvas.addEventListener('wheel', (event) => {
+      event.preventDefault();
+      const factor = event.deltaY > 0 ? 0.92 : 1.08;
+      state.zoom = Math.max(0.5, Math.min(2.2, state.zoom * factor));
+    }, { passive: false });
+
+    locateBtn.addEventListener('click', () => {
+      const domain = domainInput.value.trim();
+      if (!domain) return;
+      loadMap({ tabId: undefined, domain });
+    });
+
+    currentBtn.addEventListener('click', () => {
+      state.viewMode = 'page';
+      loadMap({ tabId: undefined, domain: '' });
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      loadMap({ tabId: undefined, domain: state.lookupDomain });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      state.pan = { x: 0, y: 0 };
+      state.zoom = 1;
+      if (state.data) {
+        state.selectedNode = state.graph.nodes.find((node) => node.id === 'source') || null;
+        renderSelection();
+      }
+    });
+
+    trackersBtn.addEventListener('click', () => {
+      state.viewMode = 'trackers';
+      applyViewPreset();
+    });
+
+    infraBtn.addEventListener('click', () => {
+      state.viewMode = 'infrastructure';
+      applyViewPreset();
+    });
+
+    sessionBtn.addEventListener('click', () => {
+      if (api) api.openPage('security-overview');
+    });
+
+    domainInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        locateBtn.click();
+      }
+    });
+
+    resizeCanvas();
+    draw();
+    loadMap({ tabId: sourceTabId, domain: '' });
+    window.addEventListener('resize', resizeCanvas);
   </script>
 </body>
 </html>

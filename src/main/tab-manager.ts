@@ -1,6 +1,7 @@
 import { BrowserWindow, BrowserView } from 'electron';
 import { Blocker } from './blocker';
 import { SecurityAnalyzer } from './security-analyzer';
+import { SecurityHistoryManager } from './security-history';
 import { addHistoryItem } from './ipc-handlers';
 
 interface Tab {
@@ -13,6 +14,7 @@ interface Tab {
 }
 
 const CHROME_HEIGHT = 82; // Tab bar + address bar height
+type ViewBounds = { x: number; y: number; width: number; height: number };
 
 export class TabManager {
   private tabs: Map<number, Tab> = new Map();
@@ -22,17 +24,35 @@ export class TabManager {
   private homeUrl: string;
   private blocker: Blocker;
   private security: SecurityAnalyzer;
+  private securityHistory: SecurityHistoryManager;
+  private defaultZoomFactor: number;
+  private boundsResolver?: () => ViewBounds;
+  private lastContentTabId: number | null = null;
 
   constructor(
     window: BrowserWindow,
     homeUrl: string,
     blocker: Blocker,
-    security: SecurityAnalyzer
+    security: SecurityAnalyzer,
+    securityHistory: SecurityHistoryManager,
+    defaultZoomPercent: number = 100
   ) {
     this.window = window;
     this.homeUrl = homeUrl;
     this.blocker = blocker;
     this.security = security;
+    this.securityHistory = securityHistory;
+    this.defaultZoomFactor = Math.max(0.3, Math.min(3, defaultZoomPercent / 100));
+  }
+
+  private isContentUrl(url: string): boolean {
+    return /^https?:\/\//i.test(url);
+  }
+
+  private updateContentContext(tab: Tab): void {
+    if (this.isContentUrl(tab.url)) {
+      this.lastContentTabId = tab.id;
+    }
   }
 
   createTab(url?: string): number {
@@ -44,8 +64,11 @@ export class TabManager {
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: true,
+        backgroundThrottling: false,
       },
     });
+
+    view.webContents.setZoomFactor(this.defaultZoomFactor);
 
     const tab: Tab = {
       id,
@@ -57,6 +80,7 @@ export class TabManager {
     };
 
     this.tabs.set(id, tab);
+    this.updateContentContext(tab);
 
     // Setup view event listeners
     view.webContents.on('did-start-loading', () => {
@@ -77,25 +101,42 @@ export class TabManager {
     view.webContents.on('did-navigate', (_e, url) => {
       tab.url = url;
       tab.blockedCount = 0;
+      this.blocker.clearForWebContents(view.webContents.id);
+      this.updateContentContext(tab);
       this.notifyUrlChange(tab);
       addHistoryItem(tab.title, url);
       // Analyze security for new page
       this.security.analyze(view.webContents, url).then(info => {
         this.window.webContents.send('security-update', info);
+        this.securityHistory.recordSnapshot({
+          tabId: tab.id,
+          title: tab.title,
+          url,
+          domain: info.domain,
+          privacyScore: info.privacyScore,
+          isSecure: info.isSecure,
+          cookieCount: info.cookieCount,
+          trackerCount: info.trackerCount,
+          thirdPartyCount: info.thirdPartyDomains.length,
+          blockedDomains: info.trackerDomains,
+        });
       });
     });
 
     view.webContents.on('did-navigate-in-page', (_e, url) => {
       tab.url = url;
+      this.updateContentContext(tab);
       this.notifyUrlChange(tab);
     });
 
     // Track blocked requests for this tab
-    this.blocker.onBlocked(view.webContents.id, () => {
+    this.blocker.onBlocked(view.webContents.id, (detail) => {
       tab.blockedCount++;
+      this.securityHistory.recordBlockedRequest(tab.id, detail);
       this.window.webContents.send('blocked-count-update', {
         tabId: id,
         count: tab.blockedCount,
+        detail,
       });
     });
 
@@ -134,6 +175,7 @@ export class TabManager {
     // Add new view
     this.window.addBrowserView(tab.view);
     this.activeTabId = id;
+    this.updateContentContext(tab);
 
     // Resize to fit
     this.resizeActiveTab();
@@ -148,8 +190,13 @@ export class TabManager {
     if (!tab) return;
 
     // Destroy the view
+    this.blocker.removeWebContents(tab.view.webContents.id);
     tab.view.webContents.close();
     this.tabs.delete(id);
+    if (this.lastContentTabId === id) {
+      const replacement = Array.from(this.tabs.values()).reverse().find(candidate => this.isContentUrl(candidate.url));
+      this.lastContentTabId = replacement?.id ?? null;
+    }
 
     // If we closed the active tab, switch to another
     if (id === this.activeTabId) {
@@ -178,6 +225,8 @@ export class TabManager {
 
     tab.url = url;
     tab.blockedCount = 0;
+    this.blocker.clearForWebContents(tab.view.webContents.id);
+    this.updateContentContext(tab);
     tab.view.webContents.loadURL(url);
   }
 
@@ -207,17 +256,40 @@ export class TabManager {
   resizeActiveTab(): void {
     const tab = this.tabs.get(this.activeTabId);
     if (!tab) return;
-    const bounds = this.window.getBounds();
-    tab.view.setBounds({
-      x: 0,
-      y: CHROME_HEIGHT,
-      width: bounds.width,
-      height: bounds.height - CHROME_HEIGHT,
-    });
+    const fallbackBounds = this.window.getBounds();
+    const nextBounds = this.boundsResolver
+      ? this.boundsResolver()
+      : {
+          x: 0,
+          y: CHROME_HEIGHT,
+          width: fallbackBounds.width,
+          height: fallbackBounds.height - CHROME_HEIGHT,
+        };
+    tab.view.setBounds(nextBounds);
   }
 
   getActiveTab(): Tab | undefined {
     return this.tabs.get(this.activeTabId);
+  }
+
+  getTab(id: number): Tab | undefined {
+    return this.tabs.get(id);
+  }
+
+  getPreferredContentTab(): Tab | undefined {
+    const activeTab = this.getActiveTab();
+    if (activeTab && this.isContentUrl(activeTab.url)) {
+      return activeTab;
+    }
+    if (this.lastContentTabId != null) {
+      return this.tabs.get(this.lastContentTabId);
+    }
+    return Array.from(this.tabs.values()).reverse().find(tab => this.isContentUrl(tab.url));
+  }
+
+  setViewBoundsResolver(resolver: () => ViewBounds): void {
+    this.boundsResolver = resolver;
+    this.resizeActiveTab();
   }
 
   getAllTabs(): Array<{ id: number; title: string; url: string; isActive: boolean }> {

@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow, shell, app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { pathToFileURL } from 'url';
 import { TabManager } from './tab-manager';
 import { Blocker } from './blocker';
 import { SecurityAnalyzer } from './security-analyzer';
@@ -8,6 +9,7 @@ import { TorManager } from './tor-manager';
 import { BookmarkManager } from './bookmark-manager';
 import { DownloadManager } from './download-manager';
 import { SettingsManager } from './settings-manager';
+import { SecurityHistoryManager } from './security-history';
 
 // ── History Storage ─────────────────────────────────────────
 interface HistoryItem {
@@ -46,7 +48,7 @@ export function addHistoryItem(title: string, url: string): void {
 }
 
 let sidebarOpen = false;
-const SIDEBAR_WIDTH = 300;
+const SIDEBAR_WIDTH = 340;
 const BOOKMARKS_BAR_HEIGHT = 28;
 
 export function setupIpcHandlers(
@@ -57,8 +59,99 @@ export function setupIpcHandlers(
   torManager: TorManager,
   bookmarks: BookmarkManager,
   downloads: DownloadManager,
-  settings: SettingsManager
+  settings: SettingsManager,
+  securityHistory: SecurityHistoryManager
 ): void {
+  const dns = require('dns').promises;
+
+  function getTargetTab(requestedTabId?: number) {
+    if (typeof requestedTabId === 'number' && Number.isInteger(requestedTabId)) {
+      const requestedTab = tabManager.getTab(requestedTabId);
+      if (requestedTab && /^https?:\/\//i.test(requestedTab.url)) {
+        return requestedTab;
+      }
+      return tabManager.getPreferredContentTab() || requestedTab;
+    }
+    return tabManager.getPreferredContentTab() || tabManager.getActiveTab();
+  }
+
+  function sanitizeDomain(input?: string): string | null {
+    if (!input) return null;
+    const normalized = input.trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9.-]+\.[a-z]{2,}$/.test(normalized)) return null;
+    const blockedNames = ['localhost', 'internal', 'local', 'corp', 'intranet'];
+    if (blockedNames.some(name => normalized.includes(name))) return null;
+    return normalized;
+  }
+
+  async function resolveAddresses(domain?: string): Promise<string[]> {
+    const normalized = sanitizeDomain(domain);
+    if (!normalized) return [];
+    try {
+      return (await dns.resolve4(normalized)).slice(0, 3);
+    } catch {
+      return [];
+    }
+  }
+
+  async function buildTrackerIntel(requestedTabId?: number) {
+    const tab = getTargetTab(requestedTabId);
+    if (!tab) return null;
+
+    const securityInfo = await security.analyze(tab.view.webContents, tab.url);
+    const requests = blocker.getBlockedDetails(tab.view.webContents.id);
+    const domainMap = new Map<string, {
+      domain: string;
+      blockedCount: number;
+      resourceTypes: string[];
+      lastSeen: number;
+      sampleUrl: string;
+      matched: string[];
+    }>();
+
+    for (const request of requests) {
+      const existing = domainMap.get(request.domain);
+      if (existing) {
+        existing.blockedCount += 1;
+        existing.lastSeen = Math.max(existing.lastSeen, request.timestamp);
+        if (!existing.resourceTypes.includes(request.resourceType)) {
+          existing.resourceTypes.push(request.resourceType);
+        }
+        if (!existing.matched.includes(request.matched)) {
+          existing.matched.push(request.matched);
+        }
+      } else {
+        domainMap.set(request.domain, {
+          domain: request.domain,
+          blockedCount: 1,
+          resourceTypes: [request.resourceType],
+          lastSeen: request.timestamp,
+          sampleUrl: request.url,
+          matched: [request.matched],
+        });
+      }
+    }
+
+    const domains = Array.from(domainMap.values()).sort((a, b) => b.blockedCount - a.blockedCount);
+
+    return {
+      tabId: tab.id,
+      title: tab.title,
+      url: tab.url,
+      sourceDomain: securityInfo.domain,
+      isSecure: securityInfo.isSecure,
+      protocol: securityInfo.protocol,
+      privacyScore: securityInfo.privacyScore,
+      cookieCount: securityInfo.cookieCount,
+      trackerCount: securityInfo.trackerCount,
+      thirdPartyDomains: securityInfo.thirdPartyDomains,
+      pageBlocked: requests.length,
+      totalBlocked: blocker.blockedTotal,
+      domains,
+      requests,
+    };
+  }
+
   // ── Tab management ────────────────────────────────────────
   ipcMain.on('new-tab', (_e, url?: string) => tabManager.createTab(url));
   ipcMain.on('close-tab', (_e, tabId: number) => tabManager.closeTab(tabId));
@@ -72,22 +165,81 @@ export function setupIpcHandlers(
   ipcMain.on('go-home', () => tabManager.goHome());
 
   // ── Internal pages (allowlisted to prevent path traversal) ──
-  const ALLOWED_PAGES = new Set(['downloads', 'bookmarks', 'settings', 'history', 'internet-map']);
-  ipcMain.on('open-page', (_e, page: string) => {
+  const ALLOWED_PAGES = new Set(['downloads', 'bookmarks', 'settings', 'history', 'internet-map', 'security-overview']);
+  ipcMain.on('open-page', (_e, page: string, context?: { sourceTabId?: number; focus?: string; view?: string }) => {
     if (!ALLOWED_PAGES.has(page)) {
       console.warn(`[SECURITY] Blocked open-page for unauthorized page: ${page}`);
       return;
     }
     const pagePath = path.join(__dirname, '..', '..', 'src', 'renderer', `${page}.html`);
-    tabManager.createTab(`file://${pagePath}`);
+    const pageUrl = pathToFileURL(pagePath);
+
+    if (page === 'internet-map') {
+      const sourceTabId = typeof context?.sourceTabId === 'number' && Number.isInteger(context.sourceTabId)
+        ? context.sourceTabId
+        : tabManager.getPreferredContentTab()?.id;
+      if (typeof sourceTabId === 'number') {
+        pageUrl.searchParams.set('sourceTabId', String(sourceTabId));
+      }
+      if (typeof context?.view === 'string' && /^[a-z-]{1,24}$/i.test(context.view)) {
+        pageUrl.searchParams.set('view', context.view);
+      }
+      if (typeof context?.focus === 'string' && context.focus.length <= 120) {
+        pageUrl.searchParams.set('focus', context.focus);
+      }
+    }
+
+    tabManager.createTab(pageUrl.toString());
   });
 
   // ── Blocker ───────────────────────────────────────────────
-  ipcMain.handle('toggle-blocker', () => blocker.toggle());
+  ipcMain.handle('toggle-blocker', () => {
+    const enabled = blocker.toggle();
+    settings.set('blockTrackers', enabled);
+    window.webContents.send('settings-changed', settings.getAll());
+    return enabled;
+  });
   ipcMain.handle('get-blocker-stats', () => ({
     enabled: blocker.enabled,
     totalBlocked: blocker.blockedTotal,
   }));
+  ipcMain.handle('get-tracker-intel', async (_e, requestedTabId?: number) => {
+    return buildTrackerIntel(requestedTabId);
+  });
+  ipcMain.handle('get-network-map-data', async (_e, requestedTabId?: number, lookupDomain?: string) => {
+    const intel = await buildTrackerIntel(requestedTabId);
+    const sourceDomain = sanitizeDomain(lookupDomain) || intel?.sourceDomain || '';
+    const sourceAddresses = await resolveAddresses(sourceDomain);
+    const topDomains = intel?.domains.slice(0, 6) || [];
+    const trackers = await Promise.all(
+      topDomains.map(async tracker => ({
+        ...tracker,
+        addresses: await resolveAddresses(tracker.domain),
+      }))
+    );
+
+    return {
+      generatedAt: Date.now(),
+      routeMode: torManager.enabled ? 'tor' : 'direct',
+      sourceTabId: intel?.tabId ?? null,
+      sourceUrl: intel?.url ?? '',
+      sourceDomain,
+      sourceAddresses,
+      privacyScore: intel?.privacyScore ?? 100,
+      cookieCount: intel?.cookieCount ?? 0,
+      pageBlocked: intel?.pageBlocked ?? 0,
+      totalBlocked: intel?.totalBlocked ?? blocker.blockedTotal,
+      trackerCount: intel?.trackerCount ?? 0,
+      thirdPartyDomains: intel?.thirdPartyDomains ?? [],
+      trackers,
+      dnsResolvers: ['1.1.1.1', '8.8.8.8'],
+    };
+  });
+  ipcMain.handle('get-security-overview', () => securityHistory.getOverview());
+  ipcMain.handle('clear-security-overview', () => {
+    securityHistory.clear();
+    return true;
+  });
 
   // ── Tor ───────────────────────────────────────────────────
   ipcMain.handle('toggle-tor', async () => {
@@ -166,10 +318,27 @@ export function setupIpcHandlers(
   ipcMain.handle('get-settings', () => settings.getAll());
   ipcMain.handle('set-setting', (_e, key: string, value: any) => {
     settings.set(key as any, value);
+    if (key === 'blockTrackers') {
+      blocker.setEnabled(Boolean(value));
+    }
+    if (key === 'defaultZoom') {
+      const activeTab = tabManager.getActiveTab();
+      if (activeTab) {
+        const zoomFactor = Math.max(0.3, Math.min(3, (Number(value) || 100) / 100));
+        activeTab.view.webContents.setZoomFactor(zoomFactor);
+      }
+    }
+    if (key === 'showBookmarksBar') {
+      resizeBrowserView();
+    }
+    window.webContents.send('settings-changed', settings.getAll());
     return settings.getAll();
   });
   ipcMain.handle('reset-settings', () => {
     settings.reset();
+    blocker.setEnabled(settings.get('blockTrackers'));
+    resizeBrowserView();
+    window.webContents.send('settings-changed', settings.getAll());
     return settings.getAll();
   });
 
@@ -278,15 +447,9 @@ export function setupIpcHandlers(
   // ── DNS lookup (for Internet Map) ─────────────────────────
   ipcMain.handle('dns-lookup', async (_e, domain: string) => {
     // Validate domain format to prevent internal network recon
-    if (!domain || !/^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(domain)) {
+    if (!sanitizeDomain(domain)) {
       return { domain, addresses: [], error: 'Invalid domain format' };
     }
-    // Block internal/private hostnames
-    const blocked = ['localhost', 'internal', 'local', 'corp', 'intranet'];
-    if (blocked.some(b => domain.toLowerCase().includes(b))) {
-      return { domain, addresses: [], error: 'Internal domains not allowed' };
-    }
-    const dns = require('dns').promises;
     try {
       const addresses = await dns.resolve4(domain);
       return { domain, addresses, error: null };
@@ -297,19 +460,22 @@ export function setupIpcHandlers(
 
   // ── Window resize ─────────────────────────────────────────
   window.on('resize', () => resizeBrowserView());
+  tabManager.setViewBoundsResolver(() => getViewBounds());
 
-  function resizeBrowserView() {
-    const tab = tabManager.getActiveTab();
-    if (!tab) return;
+  function getViewBounds() {
     const bounds = window.getBounds();
     const showBar = settings.get('showBookmarksBar');
     const chromeH = 82 + (showBar ? BOOKMARKS_BAR_HEIGHT : 0);
     const sidebarW = sidebarOpen ? SIDEBAR_WIDTH : 0;
-    tab.view.setBounds({
+    return {
       x: 0,
       y: chromeH,
       width: bounds.width - sidebarW,
       height: bounds.height - chromeH,
-    });
+    };
+  }
+
+  function resizeBrowserView() {
+    tabManager.resizeActiveTab();
   }
 }

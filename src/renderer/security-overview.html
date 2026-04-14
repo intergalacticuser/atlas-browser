@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Total Security Overview - Angle Browser</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    body { padding: 34px; max-width: 1180px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    .subtitle { color: #96a4c0; font-size: 14px; line-height: 1.5; margin-bottom: 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .action-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn { background: #121821; border: 1px solid #243041; color: #dce6fb; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 12px; }
+    .btn:hover { border-color: #4ea9ff; color: #ffffff; }
+    .btn-danger { border-color: #5a2632; color: #ff8ca0; }
+    .btn-danger:hover { border-color: #ff6f86; color: #ffd7de; }
+    .grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; margin-bottom:16px; }
+    .panel { background:#0e131b; border:1px solid #1d2734; border-radius:18px; padding:18px; }
+    .panel h2 { font-size: 16px; margin-bottom: 14px; }
+    .metrics { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; }
+    .metric { padding:14px; border-radius:14px; background:#121821; border:1px solid #1f2b3a; }
+    .metric-label { color:#7f91b1; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+    .metric-value { margin-top:6px; font-size:26px; font-weight:700; letter-spacing:-0.04em; }
+    .metric-sub { margin-top:4px; color:#7f91b1; font-size:11px; font-family:'SF Mono', monospace; }
+    .list { display:flex; flex-direction:column; gap:10px; }
+    .row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:14px; background:#121821; border:1px solid #1f2b3a; cursor:pointer; }
+    .row:hover { border-color:#4ea9ff55; }
+    .row-title { font-size:13px; color:#e8eefb; }
+    .row-meta { margin-top:4px; color:#7f91b1; font-size:11px; line-height:1.5; font-family:'SF Mono', monospace; }
+    .row-side { text-align:right; color:#7f91b1; font-size:11px; font-family:'SF Mono', monospace; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:11px; font-family:'SF Mono', monospace; background:#141d2a; }
+    .pill.good { color:#52d39b; border:1px solid #214d3b; }
+    .pill.warn { color:#f3bc58; border:1px solid #5a4720; }
+    .pill.bad { color:#ff6f86; border:1px solid #5a2632; }
+    .empty { color:#7f91b1; padding:18px 0; text-align:center; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Total Security Overview</h1>
+  <div class="subtitle">
+    <span>Session-wide and historical protection telemetry for Angle Browser. This view combines privacy snapshots, blocked tracker activity, and long-term risk trends.</span>
+    <div class="action-row">
+      <button id="refresh-btn" class="btn">Refresh</button>
+      <button id="clear-btn" class="btn btn-danger">Clear Security History</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Current Session</h2>
+      <div id="session-metrics" class="metrics"></div>
+    </section>
+    <section class="panel">
+      <h2>All-Time History</h2>
+      <div id="alltime-metrics" class="metrics"></div>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Top Trackers This Session</h2>
+      <div id="session-trackers" class="list"></div>
+    </section>
+    <section class="panel">
+      <h2>Top Trackers Across History</h2>
+      <div id="alltime-trackers" class="list"></div>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Recent Session Pages</h2>
+      <div id="session-pages" class="list"></div>
+    </section>
+    <section class="panel">
+      <h2>Recent Historical Pages</h2>
+      <div id="alltime-pages" class="list"></div>
+    </section>
+  </div>
+
+  <script>
+    const api = window.browserAPI;
+    const sessionMetrics = document.getElementById('session-metrics');
+    const alltimeMetrics = document.getElementById('alltime-metrics');
+    const sessionTrackers = document.getElementById('session-trackers');
+    const alltimeTrackers = document.getElementById('alltime-trackers');
+    const sessionPages = document.getElementById('session-pages');
+    const alltimePages = document.getElementById('alltime-pages');
+
+    function metricCard(label, value, sub = '', color = '#e8eefb') {
+      return `
+        <div class="metric">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value" style="color:${color}">${value}</div>
+          <div class="metric-sub">${sub}</div>
+        </div>
+      `;
+    }
+
+    function scoreColor(score) {
+      if (score >= 80) return '#52d39b';
+      if (score >= 55) return '#f3bc58';
+      return '#ff6f86';
+    }
+
+    function pillClass(score) {
+      if (score >= 80) return 'good';
+      if (score >= 55) return 'warn';
+      return 'bad';
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleString();
+    }
+
+    function renderTrackers(container, items, emptyLabel) {
+      if (!items || items.length === 0) {
+        container.innerHTML = `<div class="empty">${emptyLabel}</div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="row">
+          <div>
+            <div class="row-title">${item.domain}</div>
+            <div class="row-meta">${(item.resourceTypes || []).join(' • ') || 'request'}</div>
+          </div>
+          <div class="row-side">
+            <div>${item.blockedCount} blocked</div>
+            <div>${formatDate(item.lastSeen)}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderPages(container, items, emptyLabel) {
+      if (!items || items.length === 0) {
+        container.innerHTML = `<div class="empty">${emptyLabel}</div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="row" data-url="${item.url}">
+          <div>
+            <div class="row-title">${item.title || item.domain || item.url}</div>
+            <div class="row-meta">${item.domain} • cookies ${item.cookieCount} • trackers ${item.trackerCount} • blocked ${item.blockedRequests}</div>
+          </div>
+          <div class="row-side">
+            <div class="pill ${pillClass(item.privacyScore)}">score ${item.privacyScore}</div>
+            <div style="margin-top:8px">${formatDate(item.timestamp)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.row[data-url]').forEach(row => {
+        row.addEventListener('click', () => {
+          if (api) api.navigate(row.dataset.url);
+        });
+      });
+    }
+
+    async function load() {
+      if (!api) return;
+      const overview = await api.getSecurityOverview();
+      const session = overview.currentSession;
+      const allTime = overview.allTime;
+
+      sessionMetrics.innerHTML = [
+        metricCard('Pages analyzed', session.pagesAnalyzed, 'Pages in this launch'),
+        metricCard('Blocked requests', session.blockedRequests, 'Requests neutralized', '#ff6f86'),
+        metricCard('Privacy avg', session.averagePrivacyScore, 'Average session score', scoreColor(session.averagePrivacyScore)),
+        metricCard('Secure / insecure', `${session.securePages}/${session.insecurePages}`, `Started ${formatDate(session.startedAt)}`),
+      ].join('');
+
+      alltimeMetrics.innerHTML = [
+        metricCard('Pages analyzed', allTime.pagesAnalyzed, 'Across stored history'),
+        metricCard('Blocked requests', allTime.blockedRequests, 'Historical tracker blocks', '#ff6f86'),
+        metricCard('Privacy avg', allTime.averagePrivacyScore, 'Average historical score', scoreColor(allTime.averagePrivacyScore)),
+        metricCard('Secure / insecure', `${allTime.securePages}/${allTime.insecurePages}`, 'Stored across all sessions'),
+      ].join('');
+
+      renderTrackers(sessionTrackers, session.topTrackers, 'No blocked trackers in this session yet.');
+      renderTrackers(alltimeTrackers, allTime.topTrackers, 'No stored tracker history yet.');
+      renderPages(sessionPages, session.recentPages, 'No session pages recorded yet.');
+      renderPages(alltimePages, allTime.recentPages, 'No historical pages recorded yet.');
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', load);
+    document.getElementById('clear-btn').addEventListener('click', async () => {
+      if (!api || !confirm('Clear all stored security history?')) return;
+      await api.clearSecurityOverview();
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>

@@ -43,10 +43,25 @@ const BLOCKED_PATTERNS = [
   /beacon\./i,
 ];
 
-type BlockCallback = () => void;
+export interface BlockedRequestDetail {
+  id: string;
+  url: string;
+  domain: string;
+  resourceType: string;
+  timestamp: number;
+  rule: 'domain' | 'pattern';
+  matched: string;
+}
+
+type BlockRuleMatch =
+  | { blocked: false }
+  | { blocked: true; rule: 'domain' | 'pattern'; matched: string };
+
+type BlockCallback = (detail: BlockedRequestDetail) => void;
 
 export class Blocker {
   private callbacks: Map<number, BlockCallback[]> = new Map();
+  private blockedByContents: Map<number, BlockedRequestDetail[]> = new Map();
   private totalBlocked: number = 0;
   private isEnabled: boolean = true;
 
@@ -57,15 +72,30 @@ export class Blocker {
         return;
       }
 
-      const shouldBlock = this.shouldBlock(details.url);
+      const match = this.shouldBlock(details.url);
 
-      if (shouldBlock) {
+      if (match.blocked) {
         this.totalBlocked++;
+
+        const detail: BlockedRequestDetail = {
+          id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          url: details.url,
+          domain: this.extractDomain(details.url),
+          resourceType: details.resourceType || 'other',
+          timestamp: Date.now(),
+          rule: match.rule,
+          matched: match.matched,
+        };
 
         // Notify tab-specific callbacks
         const tabCallbacks = details.webContentsId != null ? this.callbacks.get(details.webContentsId) : undefined;
+        if (details.webContentsId != null) {
+          const existing = this.blockedByContents.get(details.webContentsId) || [];
+          existing.unshift(detail);
+          this.blockedByContents.set(details.webContentsId, existing.slice(0, 80));
+        }
         if (tabCallbacks) {
-          tabCallbacks.forEach(cb => cb());
+          tabCallbacks.forEach(cb => cb(detail));
         }
 
         callback({ cancel: true });
@@ -75,7 +105,7 @@ export class Blocker {
     });
   }
 
-  private shouldBlock(url: string): boolean {
+  private shouldBlock(url: string): BlockRuleMatch {
     try {
       const parsed = new URL(url);
       const hostname = parsed.hostname;
@@ -83,20 +113,28 @@ export class Blocker {
       // Check against blocked domains
       for (const domain of BLOCKED_DOMAINS) {
         if (hostname === domain || hostname.endsWith('.' + domain)) {
-          return true;
+          return { blocked: true, rule: 'domain', matched: domain };
         }
       }
 
       // Check URL patterns
       for (const pattern of BLOCKED_PATTERNS) {
         if (pattern.test(url)) {
-          return true;
+          return { blocked: true, rule: 'pattern', matched: pattern.toString() };
         }
       }
 
-      return false;
+      return { blocked: false };
     } catch {
-      return false;
+      return { blocked: false };
+    }
+  }
+
+  private extractDomain(url: string): string {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return 'unknown';
     }
   }
 
@@ -104,6 +142,32 @@ export class Blocker {
     const existing = this.callbacks.get(webContentsId) || [];
     existing.push(callback);
     this.callbacks.set(webContentsId, existing);
+  }
+
+  clearForWebContents(webContentsId: number): void {
+    this.blockedByContents.delete(webContentsId);
+  }
+
+  removeWebContents(webContentsId: number): void {
+    this.callbacks.delete(webContentsId);
+    this.blockedByContents.delete(webContentsId);
+  }
+
+  getBlockedDetails(webContentsId: number): BlockedRequestDetail[] {
+    return [...(this.blockedByContents.get(webContentsId) || [])];
+  }
+
+  getBlockedCount(webContentsId: number): number {
+    return this.getBlockedDetails(webContentsId).length;
+  }
+
+  getBlockedDomains(webContentsId: number): string[] {
+    return Array.from(new Set(this.getBlockedDetails(webContentsId).map(item => item.domain).filter(Boolean)));
+  }
+
+  setEnabled(enabled: boolean): boolean {
+    this.isEnabled = enabled;
+    return this.isEnabled;
   }
 
   toggle(): boolean {

@@ -41,17 +41,28 @@ If you've ever wished a browser like this existed - here it is. And if you want 
 
 | | What | Why it matters |
 |---|------|---------------|
-| :shield: | **Tracker Blocker** | Blocks 50+ ad/tracker domains. No extensions needed. |
+| :shield: | **Tracker Blocker + Shield Popover** | Blocks ads and trackers, shows live page/session counts, and lets you drill straight into blocked domains. |
 | :onion: | **Tor Integration** | One button. All traffic through Tor. Your ISP sees nothing. |
 | :ghost: | **Phantom Mode** | Spins up an isolated Docker container for your session. When done - container destroyed. Zero trace. |
 | :mag: | **Search Angel** | Privacy search engine. Only uses DuckDuckGo, Brave, Startpage, Mojeek. Google/Bing disabled. |
-| :world_map: | **Internet Map** | See the internet topology. Enter any domain, see where it lives. |
+| :world_map: | **Internet Map** | Page-aware internet topology with tracker, infrastructure, and current-page presets built into the browser. |
 | :lock: | **Privacy Score** | Every site gets a 0-100 privacy rating in real time. |
-| :bar_chart: | **Security Dashboard** | SSL status, cookies, trackers blocked, Tor circuit, all in one sidebar. |
+| :bar_chart: | **Security Dashboard** | SSL status, cookies, trackers blocked, Tor circuit, and live network preview in one sidebar. |
+| :clipboard: | **Security Overview** | Session-wide and historical protection telemetry with top trackers, page history, and privacy trends. |
 | :bookmark: | **Bookmarks** | Bar + full manager. Local only. |
+| :clock3: | **History** | Dedicated history view in both the toolbar and app menu for quick revisit workflows. |
 | :arrow_down: | **Downloads** | Built-in manager with progress tracking. |
 | :broom: | **Auto-Clear** | Everything wiped on exit. By default. |
 | :gear: | **Settings** | Homepage, privacy, Tor, appearance, downloads. |
+
+## What's New In 0.3.1
+
+- `Internet Map` now opens with a real baseline topology instead of an empty state, and follows the current browsing context automatically.
+- `Use Current Page`, `This Page`, and `Open Internet Map` now resolve against the last real web page, so internal browser pages no longer break map context.
+- `Total Session` now opens a dedicated `Total Security Overview` page with current-session and historical protection telemetry.
+- The tracker blocker now has an info popover with per-page/session counts, blocked-domain detail, pause/resume control, and shortcuts into the map and overview.
+- Added `History` and `Security Overview` entry points to both the main toolbar and the native app menu.
+- The security sidebar and mini network map now stay live as you browse, block requests, and switch between direct and Tor routing.
 
 ## Install
 
@@ -139,6 +150,7 @@ Hybrid search (BM25 + vector embeddings + live web), evidence-based ranking, sou
 - [x] Phantom Mode
 - [x] Internet Map
 - [x] Security dashboard
+- [x] Session security overview + persistent security history
 - [x] Bookmarks, downloads, history, settings
 - [x] macOS .dmg
 

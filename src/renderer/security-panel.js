@@ -1,13 +1,13 @@
-// Security Panel - updates sidebar with security info
-// Most logic is in browser-ui.js, this handles periodic updates
-
-setInterval(async () => {
+function requestSecurityRefresh() {
   const sidebar = document.getElementById('security-sidebar');
-  if (sidebar && !sidebar.classList.contains('hidden') && window.browserAPI) {
-    const stats = await window.browserAPI.getBlockerStats();
-    const trackersTotal = document.getElementById('trackers-total');
-    if (trackersTotal) {
-      trackersTotal.textContent = stats.totalBlocked;
-    }
-  }
-}, 3000);
+  if (!sidebar || sidebar.classList.contains('hidden') || !window.browserAPI) return;
+  window.dispatchEvent(new CustomEvent('angle:refresh-security'));
+}
+
+setInterval(requestSecurityRefresh, 4000);
+
+if (window.browserAPI) {
+  window.browserAPI.onUrlChanged(requestSecurityRefresh);
+  window.browserAPI.onBlockedCountUpdate(requestSecurityRefresh);
+  window.browserAPI.onTorStatusChanged(requestSecurityRefresh);
+}

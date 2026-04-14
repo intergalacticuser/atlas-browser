@@ -1,5 +1,6 @@
 import { app, Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import { TabManager } from './tab-manager';
 
 export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
@@ -14,7 +15,7 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           accelerator: 'CmdOrCtrl+,',
           click: () => {
             const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'settings.html');
-            tabManager.createTab(`file://${p}`);
+            tabManager.createTab(pathToFileURL(p).toString());
           },
         },
         { type: 'separator' },
@@ -53,7 +54,15 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           accelerator: 'CmdOrCtrl+J',
           click: () => {
             const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'downloads.html');
-            tabManager.createTab(`file://${p}`);
+            tabManager.createTab(pathToFileURL(p).toString());
+          },
+        },
+        {
+          label: 'History',
+          accelerator: 'CmdOrCtrl+Y',
+          click: () => {
+            const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'history.html');
+            tabManager.createTab(pathToFileURL(p).toString());
           },
         },
         {
@@ -61,7 +70,7 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           accelerator: 'CmdOrCtrl+Shift+B',
           click: () => {
             const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'bookmarks.html');
-            tabManager.createTab(`file://${p}`);
+            tabManager.createTab(pathToFileURL(p).toString());
           },
         },
         {
@@ -69,7 +78,15 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           accelerator: 'CmdOrCtrl+Shift+M',
           click: () => {
             const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'internet-map.html');
-            tabManager.createTab(`file://${p}`);
+            tabManager.createTab(pathToFileURL(p).toString());
+          },
+        },
+        {
+          label: 'Security Overview',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'security-overview.html');
+            tabManager.createTab(pathToFileURL(p).toString());
           },
         },
       ],
@@ -135,6 +152,23 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           },
         },
         { type: 'separator' },
+        {
+          label: 'Open Internet Map',
+          accelerator: 'CmdOrCtrl+Alt+M',
+          click: () => {
+            const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'internet-map.html');
+            tabManager.createTab(pathToFileURL(p).toString());
+          },
+        },
+        {
+          label: 'Open Security Overview',
+          accelerator: 'CmdOrCtrl+Alt+S',
+          click: () => {
+            const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'security-overview.html');
+            tabManager.createTab(pathToFileURL(p).toString());
+          },
+        },
+        { type: 'separator' },
         { role: 'togglefullscreen' },
       ],
     },
@@ -171,7 +205,7 @@ export function setupMenu(window: BrowserWindow, tabManager: TabManager): void {
           accelerator: 'CmdOrCtrl+Shift+B',
           click: () => {
             const p = path.join(__dirname, '..', '..', 'src', 'renderer', 'bookmarks.html');
-            tabManager.createTab(`file://${p}`);
+            tabManager.createTab(pathToFileURL(p).toString());
           },
         },
       ],

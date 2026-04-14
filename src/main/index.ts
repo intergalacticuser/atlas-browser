@@ -7,6 +7,7 @@ import { TorManager } from './tor-manager';
 import { BookmarkManager } from './bookmark-manager';
 import { DownloadManager } from './download-manager';
 import { SettingsManager } from './settings-manager';
+import { SecurityHistoryManager } from './security-history';
 import { setupMenu } from './menu';
 import { setupIpcHandlers } from './ipc-handlers';
 
@@ -20,6 +21,7 @@ let securityAnalyzer: SecurityAnalyzer | null = null;
 let torManager: TorManager | null = null;
 let bookmarkManager: BookmarkManager | null = null;
 let downloadManager: DownloadManager | null = null;
+let securityHistoryManager: SecurityHistoryManager | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -36,6 +38,7 @@ function createWindow(): void {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      backgroundThrottling: false,
     },
   });
 
@@ -43,14 +46,23 @@ function createWindow(): void {
 
   // Initialize all components
   blocker = new Blocker();
-  securityAnalyzer = new SecurityAnalyzer();
+  blocker.setEnabled(settingsManager.get('blockTrackers'));
+  securityAnalyzer = new SecurityAnalyzer(blocker);
+  securityHistoryManager = new SecurityHistoryManager();
   torManager = new TorManager();
   bookmarkManager = new BookmarkManager();
   downloadManager = new DownloadManager(mainWindow);
-  tabManager = new TabManager(mainWindow, SEARCH_ANGEL_URL, blocker, securityAnalyzer);
+  tabManager = new TabManager(
+    mainWindow,
+    SEARCH_ANGEL_URL,
+    blocker,
+    securityAnalyzer,
+    securityHistoryManager,
+    settingsManager.get('defaultZoom')
+  );
 
   // Setup
-  setupIpcHandlers(mainWindow, tabManager, blocker, securityAnalyzer, torManager, bookmarkManager, downloadManager, settingsManager);
+  setupIpcHandlers(mainWindow, tabManager, blocker, securityAnalyzer, torManager, bookmarkManager, downloadManager, settingsManager, securityHistoryManager);
   setupMenu(mainWindow, tabManager);
   blocker.setup(session.defaultSession);
   downloadManager.setup(session.defaultSession);
@@ -70,6 +82,10 @@ function createWindow(): void {
 app.commandLine.appendSwitch('disable-features', 'SpareRendererForSitePerProcess');
 app.commandLine.appendSwitch('disable-client-side-phishing-detection');
 app.commandLine.appendSwitch('disable-component-update');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
 
 app.whenReady().then(() => {
   session.defaultSession.setUserAgent(
