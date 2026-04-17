@@ -1,27 +1,29 @@
 :root {
-  --bg: #06070b;
-  --bg-elevated: #0c1016;
-  --surface: rgba(16, 20, 29, 0.92);
-  --surface-strong: rgba(20, 24, 35, 0.98);
-  --surface-soft: rgba(12, 16, 24, 0.88);
-  --surface-2: rgba(31, 39, 56, 0.9);
+  --bg: #1d1b20;
+  --bg-elevated: #242228;
+  --surface: rgba(36, 34, 40, 0.92);
+  --surface-strong: rgba(42, 40, 47, 0.98);
+  --surface-soft: rgba(29, 27, 32, 0.88);
+  --surface-2: rgba(50, 47, 58, 0.9);
   --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(138, 197, 255, 0.18);
-  --text: #eef3ff;
-  --text-soft: #cad5ec;
-  --muted: #7c88a3;
-  --accent: #70d6ff;
-  --accent-2: #2fb9ff;
-  --green: #52d39b;
-  --amber: #f3bc58;
-  --red: #ff6f86;
-  --purple: #af80ff;
+  --border-strong: rgba(158, 143, 255, 0.18);
+  --text: #f5efe8;
+  --text-soft: #d8d0c8;
+  --muted: #a49d95;
+  --accent: #8f7cff;
+  --accent-2: #7b68f5;
+  --green: #32d69b;
+  --amber: #f2a560;
+  --red: #f07d99;
+  --purple: #9e8fff;
+  --porcelain: #f5efe8;
+  --ink: #1d1b20;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --font-ui: "SF Pro Display", "Segoe UI", "Helvetica Neue", sans-serif;
-  --font-copy: "Avenir Next", "SF Pro Text", "Segoe UI", sans-serif;
+  --font-ui: "Inter", "SF Pro Display", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-copy: "Inter", "SF Pro Text", "Segoe UI", sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
   --chrome-height: 110px;
 }
@@ -45,9 +47,9 @@ body {
   font-family: var(--font-copy);
   font-size: 13px;
   background:
-    radial-gradient(circle at top right, rgba(47, 185, 255, 0.09), transparent 26%),
-    radial-gradient(circle at 15% 15%, rgba(175, 128, 255, 0.12), transparent 28%),
-    linear-gradient(180deg, #0a0d14 0%, #06070b 56%, #05060a 100%);
+    radial-gradient(circle at top right, rgba(158, 143, 255, 0.09), transparent 26%),
+    radial-gradient(circle at 15% 15%, rgba(158, 143, 255, 0.12), transparent 28%),
+    linear-gradient(180deg, #22202a 0%, #1d1b20 56%, #1a181d 100%);
 }
 
 body.bookmarks-hidden {
@@ -68,7 +70,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid rgba(112, 214, 255, 0.85);
+  outline: 2px solid rgba(158, 143, 255, 0.85);
   outline-offset: 2px;
 }
 
@@ -116,10 +118,10 @@ svg {
   width: 0;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), #8bffdf, var(--purple));
+  background: linear-gradient(90deg, var(--accent), #32d69b, var(--purple));
   background-size: 200% 100%;
   animation: progressShimmer 1.6s linear infinite;
-  box-shadow: 0 0 16px rgba(112, 214, 255, 0.65);
+  box-shadow: 0 0 16px rgba(158, 143, 255, 0.65);
   transition: width 0.28s ease;
 }
 
@@ -135,7 +137,7 @@ svg {
   padding: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  background: rgba(14, 18, 27, 0.94);
+  background: rgba(29, 27, 32, 0.94);
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow);
 }
@@ -153,7 +155,7 @@ svg {
 }
 
 .ctx-item:hover {
-  background: rgba(112, 214, 255, 0.14);
+  background: rgba(158, 143, 255, 0.14);
   color: var(--text);
 }
 
@@ -170,7 +172,7 @@ svg {
   height: 38px;
   padding: 0 12px 0 80px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(180deg, rgba(16, 19, 29, 0.96), rgba(11, 14, 22, 0.88));
+  background: linear-gradient(180deg, rgba(36, 34, 40, 0.96), rgba(29, 27, 32, 0.88));
   backdrop-filter: blur(18px);
   -webkit-app-region: drag;
 }
@@ -201,7 +203,7 @@ svg {
   height: 8px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--purple));
-  box-shadow: 0 0 12px rgba(112, 214, 255, 0.55);
+  box-shadow: 0 0 12px rgba(158, 143, 255, 0.55);
 }
 
 .tabs-container {
@@ -243,9 +245,9 @@ svg {
 .tab.active {
   color: var(--text);
   background:
-    linear-gradient(180deg, rgba(112, 214, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    linear-gradient(180deg, rgba(158, 143, 255, 0.12), rgba(255, 255, 255, 0.04)),
     rgba(255, 255, 255, 0.05);
-  border-color: rgba(112, 214, 255, 0.18);
+  border-color: rgba(158, 143, 255, 0.18);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -275,13 +277,13 @@ svg {
 
 .tab-close:hover {
   color: var(--red);
-  background: rgba(255, 111, 134, 0.14);
+  background: rgba(240, 125, 153, 0.14);
 }
 
 .tab-loading {
   width: 11px;
   height: 11px;
-  border: 2px solid rgba(112, 214, 255, 0.8);
+  border: 2px solid rgba(158, 143, 255, 0.8);
   border-top-color: transparent;
   border-radius: 50%;
   animation: tabSpin 0.78s linear infinite;
@@ -310,8 +312,8 @@ svg {
 
 .new-tab-btn:hover {
   color: var(--text);
-  border-color: rgba(112, 214, 255, 0.22);
-  background: rgba(112, 214, 255, 0.12);
+  border-color: rgba(158, 143, 255, 0.22);
+  background: rgba(158, 143, 255, 0.12);
 }
 
 .nav-bar {
@@ -321,7 +323,7 @@ svg {
   height: 44px;
   padding: 0 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(180deg, rgba(12, 16, 24, 0.96), rgba(10, 13, 20, 0.92));
+  background: linear-gradient(180deg, rgba(29, 27, 32, 0.96), rgba(10, 13, 20, 0.92));
   backdrop-filter: blur(22px);
 }
 
@@ -407,10 +409,10 @@ svg {
 }
 
 .address-bar-wrapper:focus-within {
-  border-color: rgba(112, 214, 255, 0.36);
+  border-color: rgba(158, 143, 255, 0.36);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 3px rgba(112, 214, 255, 0.12);
+    0 0 0 3px rgba(158, 143, 255, 0.12);
 }
 
 .ssl-indicator,
@@ -484,21 +486,21 @@ svg {
 
 .toolbar-btn.tor-active {
   color: var(--purple);
-  border-color: rgba(175, 128, 255, 0.24);
-  background: rgba(175, 128, 255, 0.11);
-  box-shadow: 0 0 0 1px rgba(175, 128, 255, 0.08) inset;
+  border-color: rgba(158, 143, 255, 0.24);
+  background: rgba(158, 143, 255, 0.11);
+  box-shadow: 0 0 0 1px rgba(158, 143, 255, 0.08) inset;
 }
 
 .toolbar-btn.phantom-active {
   color: var(--purple);
-  border-color: rgba(175, 128, 255, 0.24);
-  background: rgba(175, 128, 255, 0.14);
+  border-color: rgba(158, 143, 255, 0.24);
+  background: rgba(158, 143, 255, 0.14);
   animation: phantomPulse 1.8s ease-in-out infinite;
 }
 
 @keyframes phantomPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(175, 128, 255, 0.18); }
-  50% { box-shadow: 0 0 0 6px rgba(175, 128, 255, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(158, 143, 255, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(158, 143, 255, 0); }
 }
 
 .blocked-badge {
@@ -536,7 +538,7 @@ svg {
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
-    rgba(7, 10, 16, 0.97);
+    rgba(26, 24, 29, 0.97);
   box-shadow: 0 24px 44px rgba(0, 0, 0, 0.34);
   backdrop-filter: blur(18px);
   z-index: 120;
@@ -570,8 +572,8 @@ svg {
 }
 
 .shield-inline-action.is-paused {
-  border-color: rgba(255, 111, 134, 0.2);
-  background: rgba(255, 111, 134, 0.1);
+  border-color: rgba(240, 125, 153, 0.2);
+  background: rgba(240, 125, 153, 0.1);
   color: var(--red);
 }
 
@@ -626,8 +628,8 @@ svg {
 }
 
 .shield-domain-item:hover {
-  border-color: rgba(255, 111, 134, 0.18);
-  background: rgba(255, 111, 134, 0.08);
+  border-color: rgba(240, 125, 153, 0.18);
+  background: rgba(240, 125, 153, 0.08);
 }
 
 .shield-domain-main {
@@ -651,7 +653,7 @@ svg {
 
 .shield-domain-count {
   color: #ffd8df;
-  background: rgba(255, 111, 134, 0.16);
+  background: rgba(240, 125, 153, 0.16);
   border-radius: 999px;
   padding: 3px 8px;
   font-family: var(--font-mono);
@@ -675,8 +677,8 @@ svg {
   gap: 10px;
   height: 28px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(175, 128, 255, 0.18);
-  background: linear-gradient(90deg, rgba(175, 128, 255, 0.16), rgba(175, 128, 255, 0.04));
+  border-bottom: 1px solid rgba(158, 143, 255, 0.18);
+  background: linear-gradient(90deg, rgba(158, 143, 255, 0.16), rgba(158, 143, 255, 0.04));
   font-size: 11px;
 }
 
@@ -689,7 +691,7 @@ svg {
   height: 7px;
   border-radius: 50%;
   background: var(--purple);
-  box-shadow: 0 0 16px rgba(175, 128, 255, 0.65);
+  box-shadow: 0 0 16px rgba(158, 143, 255, 0.65);
   animation: phantomStatusPulse 1.6s ease-in-out infinite;
 }
 
@@ -707,7 +709,7 @@ svg {
 
 .phantom-info {
   flex: 1;
-  color: rgba(175, 128, 255, 0.78);
+  color: rgba(158, 143, 255, 0.78);
   font-family: var(--font-mono);
 }
 
@@ -719,15 +721,15 @@ svg {
 
 .phantom-destroy-btn {
   padding: 4px 10px;
-  border: 1px solid rgba(255, 111, 134, 0.28);
+  border: 1px solid rgba(240, 125, 153, 0.28);
   border-radius: 999px;
   color: var(--red);
   cursor: pointer;
-  background: rgba(255, 111, 134, 0.08);
+  background: rgba(240, 125, 153, 0.08);
 }
 
 .phantom-destroy-btn:hover {
-  background: rgba(255, 111, 134, 0.14);
+  background: rgba(240, 125, 153, 0.14);
 }
 
 .bookmarks-bar {
@@ -780,7 +782,7 @@ body.bookmarks-hidden .bookmarks-bar {
 .bm-item:hover {
   color: var(--text);
   border-color: rgba(255, 255, 255, 0.06);
-  background: rgba(112, 214, 255, 0.08);
+  background: rgba(158, 143, 255, 0.08);
 }
 
 .all-bookmarks-btn {
@@ -797,8 +799,8 @@ body.bookmarks-hidden .bookmarks-bar {
   height: calc(100vh - var(--chrome-height));
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   background:
-    radial-gradient(circle at top, rgba(112, 214, 255, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(12, 16, 24, 0.98), rgba(8, 11, 18, 0.98));
+    radial-gradient(circle at top, rgba(158, 143, 255, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(29, 27, 32, 0.98), rgba(26, 24, 29, 0.98));
   backdrop-filter: blur(24px);
   z-index: 100;
   overflow-y: auto;
@@ -858,15 +860,15 @@ body.bookmarks-hidden .bookmarks-bar {
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
-    rgba(8, 11, 18, 0.78);
+    rgba(26, 24, 29, 0.78);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .security-section-hero {
   background:
-    radial-gradient(circle at top, rgba(112, 214, 255, 0.16), transparent 36%),
+    radial-gradient(circle at top, rgba(158, 143, 255, 0.16), transparent 36%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
-    rgba(8, 11, 18, 0.84);
+    rgba(26, 24, 29, 0.84);
 }
 
 .section-heading {
@@ -896,16 +898,16 @@ body.bookmarks-hidden .bookmarks-bar {
   align-items: center;
   justify-content: center;
   padding: 7px 10px;
-  border: 1px solid rgba(112, 214, 255, 0.2);
+  border: 1px solid rgba(158, 143, 255, 0.2);
   border-radius: 999px;
-  background: rgba(112, 214, 255, 0.08);
+  background: rgba(158, 143, 255, 0.08);
   color: var(--accent);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .section-action:hover {
-  background: rgba(112, 214, 255, 0.14);
+  background: rgba(158, 143, 255, 0.14);
 }
 
 .section-action.alt {
@@ -992,8 +994,8 @@ body.bookmarks-hidden .bookmarks-bar {
 }
 
 .info-row-button:hover {
-  background: rgba(112, 214, 255, 0.08);
-  border-color: rgba(112, 214, 255, 0.18);
+  background: rgba(158, 143, 255, 0.08);
+  border-color: rgba(158, 143, 255, 0.18);
 }
 
 .badge-green { color: var(--green) !important; }
@@ -1020,8 +1022,8 @@ body.bookmarks-hidden .bookmarks-bar {
 }
 
 .tracker-chip:hover {
-  border-color: rgba(255, 111, 134, 0.18);
-  background: rgba(255, 111, 134, 0.08);
+  border-color: rgba(240, 125, 153, 0.18);
+  background: rgba(240, 125, 153, 0.08);
   color: var(--text);
 }
 
@@ -1050,7 +1052,7 @@ body.bookmarks-hidden .bookmarks-bar {
   min-width: 22px;
   padding: 3px 6px;
   border-radius: 999px;
-  background: rgba(255, 111, 134, 0.16);
+  background: rgba(240, 125, 153, 0.16);
   color: #ffd8df;
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1084,7 +1086,7 @@ body.bookmarks-hidden .bookmarks-bar {
   gap: 8px;
   padding: 7px 10px;
   border-radius: 12px;
-  background: rgba(175, 128, 255, 0.1);
+  background: rgba(158, 143, 255, 0.1);
   color: #eadbff;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1096,7 +1098,7 @@ body.bookmarks-hidden .bookmarks-bar {
   height: 7px;
   border-radius: 50%;
   background: var(--purple);
-  box-shadow: 0 0 10px rgba(175, 128, 255, 0.46);
+  box-shadow: 0 0 10px rgba(158, 143, 255, 0.46);
 }
 
 #network-canvas {
@@ -1105,6 +1107,6 @@ body.bookmarks-hidden .bookmarks-bar {
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
   background:
-    radial-gradient(circle at top, rgba(112, 214, 255, 0.08), transparent 34%),
+    radial-gradient(circle at top, rgba(158, 143, 255, 0.08), transparent 34%),
     linear-gradient(180deg, rgba(5, 7, 11, 0.92), rgba(5, 6, 10, 1));
 }

@@ -32,7 +32,7 @@ function createWindow(): void {
     title: 'Angle Browser',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 12, y: 12 },
-    backgroundColor: '#0a0a0f',
+    backgroundColor: '#1d1b20',
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       nodeIntegration: false,

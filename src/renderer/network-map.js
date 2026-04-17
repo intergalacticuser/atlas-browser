@@ -5,15 +5,15 @@ if (networkCanvas && window.browserAPI) {
   const ctx = networkCanvas.getContext('2d');
 
   const COLORS = {
-    bg: '#06090f',
-    text: '#eef3ff',
-    muted: '#7c88a3',
-    accent: '#70d6ff',
-    accentSoft: 'rgba(112, 214, 255, 0.35)',
-    green: '#52d39b',
-    red: '#ff6f86',
-    purple: '#af80ff',
-    amber: '#f3bc58',
+    bg: '#1d1b20',
+    text: '#f5efe8',
+    muted: '#a49d95',
+    accent: '#8f7cff',
+    accentSoft: 'rgba(158, 143, 255, 0.35)',
+    green: '#32d69b',
+    red: '#f07d99',
+    purple: '#9e8fff',
+    amber: '#f2a560',
   };
 
   let width = 280;
@@ -137,7 +137,7 @@ if (networkCanvas && window.browserAPI) {
     const graph = buildGraph();
 
     graph.edges.forEach(([fromNode, toNode]) => {
-      const edgeColor = fromNode.color === COLORS.red ? 'rgba(255, 111, 134, 0.42)' : 'rgba(112, 214, 255, 0.34)';
+      const edgeColor = fromNode.color === COLORS.red ? 'rgba(240, 125, 153, 0.42)' : 'rgba(158, 143, 255, 0.34)';
       drawEdge(fromNode, toNode, edgeColor, fromNode.color === COLORS.red ? 1.6 : 1.1);
     });
 

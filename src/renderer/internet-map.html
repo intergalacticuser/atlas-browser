@@ -6,18 +6,18 @@
   <title>Internet Map - Angle Browser</title>
   <style>
     :root {
-      --bg: #06070b;
-      --surface: rgba(13, 17, 26, 0.88);
-      --surface-strong: rgba(17, 22, 33, 0.96);
+      --bg: #1d1b20;
+      --surface: rgba(29, 27, 32, 0.88);
+      --surface-strong: rgba(36, 34, 40, 0.96);
       --border: rgba(255, 255, 255, 0.08);
-      --text: #eef3ff;
-      --text-soft: #cad5ec;
-      --muted: #7c88a3;
-      --accent: #70d6ff;
-      --green: #52d39b;
-      --red: #ff6f86;
-      --purple: #af80ff;
-      --amber: #f3bc58;
+      --text: #f5efe8;
+      --text-soft: #d8d0c8;
+      --muted: #a49d95;
+      --accent: #8f7cff;
+      --green: #32d69b;
+      --red: #f07d99;
+      --purple: #9e8fff;
+      --amber: #f2a560;
       --font-ui: "SF Pro Display", "Segoe UI", sans-serif;
       --font-copy: "Avenir Next", "SF Pro Text", sans-serif;
       --font-mono: "SF Mono", "JetBrains Mono", monospace;
@@ -40,9 +40,9 @@
       color: var(--text);
       font-family: var(--font-copy);
       background:
-        radial-gradient(circle at top right, rgba(112, 214, 255, 0.09), transparent 26%),
-        radial-gradient(circle at 12% 18%, rgba(175, 128, 255, 0.12), transparent 30%),
-        linear-gradient(180deg, #0b0e15 0%, #06070b 55%, #05060a 100%);
+        radial-gradient(circle at top right, rgba(158, 143, 255, 0.09), transparent 26%),
+        radial-gradient(circle at 12% 18%, rgba(158, 143, 255, 0.12), transparent 30%),
+        linear-gradient(180deg, #1a181d 0%, #1d1b20 55%, #1a181d 100%);
     }
 
     button,
@@ -59,7 +59,7 @@
 
     input:focus-visible,
     button:focus-visible {
-      outline: 2px solid rgba(112, 214, 255, 0.85);
+      outline: 2px solid rgba(158, 143, 255, 0.85);
       outline-offset: 2px;
     }
 
@@ -75,7 +75,7 @@
     .panel {
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
-        rgba(8, 11, 18, 0.76);
+        rgba(29, 27, 32, 0.76);
       border: 1px solid var(--border);
       border-radius: 22px;
       backdrop-filter: blur(20px);
@@ -100,7 +100,7 @@
       border: 1px solid rgba(255, 255, 255, 0.05);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
-        rgba(10, 13, 21, 0.86);
+        rgba(36, 34, 40, 0.86);
     }
 
     .eyebrow {
@@ -138,7 +138,7 @@
       padding: 11px 13px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 14px;
-      background: rgba(4, 6, 11, 0.76);
+      background: rgba(29, 27, 32, 0.76);
       color: var(--text);
       font-family: var(--font-mono);
     }
@@ -153,13 +153,13 @@
     }
 
     .action-btn {
-      background: rgba(112, 214, 255, 0.12);
+      background: rgba(158, 143, 255, 0.12);
       color: var(--accent);
-      border-color: rgba(112, 214, 255, 0.2);
+      border-color: rgba(158, 143, 255, 0.2);
     }
 
     .action-btn:hover {
-      background: rgba(112, 214, 255, 0.18);
+      background: rgba(158, 143, 255, 0.18);
     }
 
     .ghost-btn {
@@ -228,7 +228,7 @@
       padding: 10px 12px;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(7, 10, 16, 0.74);
+      background: rgba(29, 27, 32, 0.74);
       backdrop-filter: blur(16px);
       pointer-events: auto;
     }
@@ -254,7 +254,7 @@
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(7, 10, 16, 0.8);
+      background: rgba(29, 27, 32, 0.8);
       color: var(--muted);
       font-size: 11px;
       backdrop-filter: blur(16px);
@@ -289,8 +289,8 @@
     }
 
     .tracker-item:hover {
-      border-color: rgba(255, 111, 134, 0.18);
-      background: rgba(255, 111, 134, 0.08);
+      border-color: rgba(240, 125, 153, 0.18);
+      background: rgba(240, 125, 153, 0.08);
     }
 
     .tracker-name,
@@ -483,17 +483,17 @@
     const generatedAt = document.getElementById('generated-at');
 
     const COLORS = {
-      bg: '#06070b',
-      text: '#eef3ff',
-      muted: '#7c88a3',
-      accent: '#70d6ff',
-      accentSoft: 'rgba(112, 214, 255, 0.4)',
-      green: '#52d39b',
-      red: '#ff6f86',
-      redSoft: 'rgba(255, 111, 134, 0.38)',
-      purple: '#af80ff',
-      amber: '#f3bc58',
-      amberSoft: 'rgba(243, 188, 88, 0.36)',
+      bg: '#1d1b20',
+      text: '#f5efe8',
+      muted: '#a49d95',
+      accent: '#8f7cff',
+      accentSoft: 'rgba(158, 143, 255, 0.4)',
+      green: '#32d69b',
+      red: '#f07d99',
+      redSoft: 'rgba(240, 125, 153, 0.38)',
+      purple: '#9e8fff',
+      amber: '#f2a560',
+      amberSoft: 'rgba(242, 165, 96, 0.36)',
     };
 
     const state = {

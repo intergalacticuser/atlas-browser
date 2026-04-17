@@ -7,31 +7,31 @@
   <style>
     body { padding: 34px; max-width: 1180px; margin: 0 auto; }
     h1 { font-size: 28px; margin-bottom: 8px; }
-    .subtitle { color: #96a4c0; font-size: 14px; line-height: 1.5; margin-bottom: 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .subtitle { color: #a49d95; font-size: 14px; line-height: 1.5; margin-bottom: 24px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .action-row { display:flex; gap:10px; flex-wrap:wrap; }
-    .btn { background: #121821; border: 1px solid #243041; color: #dce6fb; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 12px; }
-    .btn:hover { border-color: #4ea9ff; color: #ffffff; }
-    .btn-danger { border-color: #5a2632; color: #ff8ca0; }
-    .btn-danger:hover { border-color: #ff6f86; color: #ffd7de; }
+    .btn { background: #242228; border: 1px solid rgba(255,255,255,0.08); color: #f5efe8; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 12px; }
+    .btn:hover { border-color: #8f7cff; color: #ffffff; }
+    .btn-danger { border-color: rgba(240,125,153,0.2); color: #f07d99; }
+    .btn-danger:hover { border-color: #f07d99; color: #f5efe8; }
     .grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; margin-bottom:16px; }
-    .panel { background:#0e131b; border:1px solid #1d2734; border-radius:18px; padding:18px; }
+    .panel { background:#242228; border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:18px; }
     .panel h2 { font-size: 16px; margin-bottom: 14px; }
     .metrics { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; }
-    .metric { padding:14px; border-radius:14px; background:#121821; border:1px solid #1f2b3a; }
-    .metric-label { color:#7f91b1; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+    .metric { padding:14px; border-radius:14px; background:#242228; border:1px solid #2a282f; }
+    .metric-label { color:#a49d95; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
     .metric-value { margin-top:6px; font-size:26px; font-weight:700; letter-spacing:-0.04em; }
-    .metric-sub { margin-top:4px; color:#7f91b1; font-size:11px; font-family:'SF Mono', monospace; }
+    .metric-sub { margin-top:4px; color:#a49d95; font-size:11px; font-family:'SF Mono', monospace; }
     .list { display:flex; flex-direction:column; gap:10px; }
-    .row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:14px; background:#121821; border:1px solid #1f2b3a; cursor:pointer; }
-    .row:hover { border-color:#4ea9ff55; }
-    .row-title { font-size:13px; color:#e8eefb; }
-    .row-meta { margin-top:4px; color:#7f91b1; font-size:11px; line-height:1.5; font-family:'SF Mono', monospace; }
-    .row-side { text-align:right; color:#7f91b1; font-size:11px; font-family:'SF Mono', monospace; }
-    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:11px; font-family:'SF Mono', monospace; background:#141d2a; }
-    .pill.good { color:#52d39b; border:1px solid #214d3b; }
-    .pill.warn { color:#f3bc58; border:1px solid #5a4720; }
-    .pill.bad { color:#ff6f86; border:1px solid #5a2632; }
-    .empty { color:#7f91b1; padding:18px 0; text-align:center; }
+    .row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:14px; background:#242228; border:1px solid #2a282f; cursor:pointer; }
+    .row:hover { border-color:#8f7cff55; }
+    .row-title { font-size:13px; color:#f5efe8; }
+    .row-meta { margin-top:4px; color:#a49d95; font-size:11px; line-height:1.5; font-family:'SF Mono', monospace; }
+    .row-side { text-align:right; color:#a49d95; font-size:11px; font-family:'SF Mono', monospace; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:11px; font-family:'SF Mono', monospace; background:#2a282f; }
+    .pill.good { color:#32d69b; border:1px solid rgba(50,214,155,0.2); }
+    .pill.warn { color:#f2a560; border:1px solid rgba(242,165,96,0.2); }
+    .pill.bad { color:#f07d99; border:1px solid rgba(240,125,153,0.2); }
+    .empty { color:#a49d95; padding:18px 0; text-align:center; }
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -90,7 +90,7 @@
     const sessionPages = document.getElementById('session-pages');
     const alltimePages = document.getElementById('alltime-pages');
 
-    function metricCard(label, value, sub = '', color = '#e8eefb') {
+    function metricCard(label, value, sub = '', color = '#f5efe8') {
       return `
         <div class="metric">
           <div class="metric-label">${label}</div>
@@ -101,9 +101,9 @@
     }
 
     function scoreColor(score) {
-      if (score >= 80) return '#52d39b';
-      if (score >= 55) return '#f3bc58';
-      return '#ff6f86';
+      if (score >= 80) return '#32d69b';
+      if (score >= 55) return '#f2a560';
+      return '#f07d99';
     }
 
     function pillClass(score) {
@@ -170,14 +170,14 @@
 
       sessionMetrics.innerHTML = [
         metricCard('Pages analyzed', session.pagesAnalyzed, 'Pages in this launch'),
-        metricCard('Blocked requests', session.blockedRequests, 'Requests neutralized', '#ff6f86'),
+        metricCard('Blocked requests', session.blockedRequests, 'Requests neutralized', '#f07d99'),
         metricCard('Privacy avg', session.averagePrivacyScore, 'Average session score', scoreColor(session.averagePrivacyScore)),
         metricCard('Secure / insecure', `${session.securePages}/${session.insecurePages}`, `Started ${formatDate(session.startedAt)}`),
       ].join('');
 
       alltimeMetrics.innerHTML = [
         metricCard('Pages analyzed', allTime.pagesAnalyzed, 'Across stored history'),
-        metricCard('Blocked requests', allTime.blockedRequests, 'Historical tracker blocks', '#ff6f86'),
+        metricCard('Blocked requests', allTime.blockedRequests, 'Historical tracker blocks', '#f07d99'),
         metricCard('Privacy avg', allTime.averagePrivacyScore, 'Average historical score', scoreColor(allTime.averagePrivacyScore)),
         metricCard('Secure / insecure', `${allTime.securePages}/${allTime.insecurePages}`, 'Stored across all sessions'),
       ].join('');
